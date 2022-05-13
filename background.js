@@ -11,14 +11,12 @@ const SKIP_THRESHOLD = 2000; // Threshold for removing current visiting tab from
 const TIMEOUT = 100;
 const MIN_TO_MS = (60 * 1000);
 
-function getUnixTime() {
-    return Math.floor(new Date().getTime());
-}
-/*
- * Class for storing information of tabs.
- * It maintains time information and window information
- * You can get the tab by using chrome.tabs.get(tabInfo.getTabId());
- */
+let currentActiveTab = [0, 0];
+let tabInfoList = [];
+
+/// Class for storing information of tabs.
+// It maintains time information and window information
+// You can get the tab by using chrome.tabs.get(tabInfo.getTabId());
 class TabInfo {
     constructor(tab_id, window_id) {
         this.tab_id = tab_id;
@@ -54,25 +52,11 @@ class TabInfo {
     }
 }
 
-let currentActiveTab = [0, 0];
-let tabInfoList = [];
 
-function getTabGroupByTime() {
-    let firstStage = [];
-    let secondStage = [];
+/// Utils
 
-    // Compare tab's idle time and threshold
-    for (const tab of tabInfoList) {
-        let time = tab.getIdleTime();
-        if (time < THRESHOLD[0] * MIN_TO_MS)
-            continue;
-        else if (time < THRESHOLD[1] * MIN_TO_MS)
-            firstStage.push(tab);
-        else
-            secondStage.push(tab);
-    }
-
-    return [firstStage, secondStage];
+function getUnixTime() {
+    return Math.floor(new Date().getTime());
 }
 
 function removeTabFromList(tab_id, windowid) {
@@ -86,6 +70,8 @@ function getTabFromList(tab_id, window_id) {
         return t.getTabId() == tab_id;
     });
 }
+
+/// Listeners 
 
 chrome.runtime.onStartup.addListener(
     async () => {
@@ -105,10 +91,8 @@ chrome.tabs.onActivated.addListener(
         if (t2 !== undefined)
             t2.setLastActivatedTime();
 
-        let [firstStage, secondStage] = getTabGroupByTime();
-        ungroupTabs();
-        groupTabs(firstStage, THRESHOLD[0]);
-        groupTabs(secondStage, THRESHOLD[1]);
+        let [firstStage, secondStage] = getTabListsByTime();
+        regroup();
     }
 );
 
@@ -133,14 +117,36 @@ chrome.tabs.onRemoved.addListener(
     }
 );
 
-setInterval(async () => {
-    let [firstStage, secondStage] = getTabGroupByTime();
+/// Return two tab lists satisfying thresholds
+function getTabListsByTime() {
+    let firstStage = [];
+    let secondStage = [];
 
+    // Compare tab's idle time and threshold
+    for (const tab of tabInfoList) {
+        let time = tab.getIdleTime();
+        if (time < THRESHOLD[0] * MIN_TO_MS)
+            continue;
+        else if (time < THRESHOLD[1] * MIN_TO_MS)
+            firstStage.push(tab);
+        else
+            secondStage.push(tab);
+    }
+
+    return [firstStage, secondStage];
+}
+
+setInterval(async () => {
+    let [firstStage, secondStage] = getTabListsByTime();
+    regroup(firstStage, secondStage);
+
+}, ALARM_INTERVAL);
+
+function regroup(firstStage, secondStage) {
     ungroupTabs();
     groupTabs(firstStage, THRESHOLD[0]);
     groupTabs(secondStage, THRESHOLD[1]);
-
-}, ALARM_INTERVAL);
+}
 
 async function ungroupTabs() {
     if (tabInfoList.length == 0)
