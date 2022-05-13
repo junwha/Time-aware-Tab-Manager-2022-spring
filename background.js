@@ -26,14 +26,10 @@ chrome.runtime.onMessage.addListener(
             }
 
             remove(tab_id_list);
-
-            console.log("closed!!!:");
-            console.log(request);
         } else if (request.type == 1) { // Update thresholds
             console.log(request);
             THRESHOLD[0] = request.thresholds[0];
             THRESHOLD[1] = request.thresholds[1];
-            console.log("threshold complete!!!");
         } else if (request.type == 2) {
             let [firstStage, secondStage] = getTabListsByTime();
             chrome.runtime.sendResponse({
@@ -42,11 +38,10 @@ chrome.runtime.onMessage.addListener(
                     second: secondStage
                 }
             });
-            console.log("send stages!!!");
         } else {
-            sendResponse({ status: 0 }); // failed
+            // sendResponse({ status: 0 }); // failed
         }
-        sendResponse({ status: 1 }); // succeed
+        // sendResponse({ status: 1 }); // succeed
     }
 );
 
