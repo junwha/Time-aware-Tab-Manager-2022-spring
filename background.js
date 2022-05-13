@@ -3,8 +3,8 @@
 // found in the LICENSE file.
 'use strict';
 
-const ALARM_INTERVAL = 2 * 1000; // Threshold for update groups (milliseconds)
-let THRESHOLD = [0.2, 1]; // Threshold for first and second stage (minute)
+const ALARM_INTERVAL = 5 * 1000; // Threshold for update groups (milliseconds)
+let THRESHOLD = [1, 2]; // Threshold for first and second stage (minute)
 const SKIP_THRESHOLD = 2000; // Threshold for removing current visiting tab from target (milliseconds)
 
 // Constants
@@ -26,13 +26,15 @@ chrome.runtime.onMessage.addListener(
             }
 
             remove(tab_id_list);
+
+            console.log("closed");
         } else if (request.type == 1) { // Update thresholds
             console.log(request);
             THRESHOLD[0] = request.thresholds[0];
             THRESHOLD[1] = request.thresholds[1];
         } else if (request.type == 2) {
             let [firstStage, secondStage] = getTabListsByTime();
-            chrome.runtime.sendResponse({
+            sendResponse({
                 tab_info: {
                     first: firstStage,
                     second: secondStage
@@ -107,6 +109,11 @@ function getTabFromList(tab_id, window_id) {
 
 chrome.runtime.onStartup.addListener(
     async () => {
+        // chrome.storage.sync.get(["threshold1", "threshold2"], function (items) {
+        //     THRESHOLD[0] = items["threshold1"];
+        //     THRESHOLD[1] = items["threshold2"];
+        // });
+        // console.log("initial thresholds are: " + THRESHOLD[0] + ", " + THRESHOLD[1]);
         chrome.runtime.connect();
     }
 );
