@@ -11,51 +11,84 @@ ctx.fillText('Tab Manager',30, 50);
 
 ctx.font = 'bold 18px comicsans'
 ctx.textAlign = 'left'
-ctx.fillText('6 hours', text_x, text_y);
-ctx.fillText('4 hours', text_x + 260, text_y);
-ctx.fillText('2 hours', text_x, text_y + 200);
-ctx.fillText('Excepted', text_x + 260, text_y + 200);
+ctx.fillText('Threshold 2', text_x, text_y);
+ctx.fillText('Threshold 1', text_x + 260, text_y);
+// ctx.fillText('2 hours', text_x, text_y + 200);
+// ctx.fillText('Excepted', text_x + 260, text_y + 200);
 
 for (let i = 0; i < 2; i++){
-    for (let j = 0; j < 2; j++){
-        shadowRect(rect_x + 260 * j + 5, rect_y + 200 * i + 5, 215, 155, 10, '#DDDDDD');
+    shadowRect(rect_x + 260 * i + 5, rect_y + 5, 215, 155, 10, '#DDDDDD');
         
-        ctx.fillStyle = '#EEEEEE';
-        ctx.strokeStyle = "#CCCCCC"
-        roundRect(ctx, rect_x + 260 * j, rect_y + 200 * i, 220, 160, 10, true, true);
-    }
+    ctx.fillStyle = '#EEEEEE';
+    ctx.strokeStyle = "#CCCCCC"
+    roundRect(ctx, rect_x + 260 * i, rect_y, 220, 160, 10, true, true);
+    // for (let j = 0; j < 2; j++){
+    //     shadowRect(rect_x + 260 * j + 5, rect_y + 200 * i + 5, 215, 155, 10, '#DDDDDD');
+        
+    //     ctx.fillStyle = '#EEEEEE';
+    //     ctx.strokeStyle = "#CCCCCC"
+    //     roundRect(ctx, rect_x + 260 * j, rect_y + 200 * i, 220, 160, 10, true, true);
+    // }
 }
 
 var thresholdBar1 = document.getElementById("thresholdRange1");
-var val1 = document.getElementById("thresholdValue1"); 
+var thresholdValue1 = document.getElementById("thresholdValue1"); 
 var thresholdBar2 = document.getElementById("thresholdRange2");
-var val2 = document.getElementById("thresholdValue2");
+var thresholdValue2 = document.getElementById("thresholdValue2");
+
+var closeButton2 = document.getElementById("closeT2");
+var closeButton1 = document.getElementById("closeT1");
+// var closeButton2 = document.getElementById("close2");
+// var closeButtone = document.getElementById("closee");
 
 chrome.storage.sync.get(["threshold1","threshold2"], function(items){
     thresholdBar1.value = items["threshold1"];
     thresholdBar2.value = items["threshold2"];
-    val1.innerHTML = thresholdBar1.value;
-    val2.innerHTML = thresholdBar2.value;
+    thresholdValue1.innerHTML = thresholdBar1.value;
+    thresholdValue2.innerHTML = thresholdBar2.value;
 });
 
+closeButton2.onclick = function(){
+    chrome.runtime.sendMessage({type:"0", level:"1"}, function(response) {
+        console.log(response.resp);
+    });
+    console.log("Close T2 Clicked");
+}
+closeButton1.onclick = function(){
+    chrome.runtime.sendMessage({type:"0", level:"0"}, function(response) {
+        console.log(response.resp);
+    });
+    console.log("Close T1 Clicked");
+}
+// closeButton2.onclick = function(){
+//     console.log("Close 2 Clicked");
+// }
+// closeButtone.onclick = function(){
+//     console.log("Close e Clicked");
+// }
+
 thresholdBar1.oninput = function(){
-    console.log(this.value);
-    val1.innerHTML = thresholdBar1.value;
+    thresholdValue1.innerHTML = thresholdBar1.value;
     chrome.storage.sync.set({"threshold1": thresholdBar1.value});
+    chrome.runtime.sendMessage({type:"1", thresholds:[thresholdBar1.value, thresholdBar2.value]}, function(response) {
+        console.log(response.resp);
+    });
+    console.log(this.value);
 }
 thresholdBar2.oninput = function(){
-    console.log(this.value);
-    val2.innerHTML = thresholdBar2.value;
+    thresholdValue2.innerHTML = thresholdBar2.value;
     chrome.storage.sync.set({"threshold2": thresholdBar2.value});
+    chrome.runtime.sendMessage({type:"1", thresholds:[thresholdBar1.value, thresholdBar2.value]}, function(response) {
+        console.log(response.resp);
+    });
+    console.log(this.value);
 }
 
-chrome.tabs.onUpdated.addListener(function(tabId, changeInfo, tab) {
-    console.log("update");
-    if(changeInfo.favIconUrl != undefined){
-      console.log("changefavi");
-      console.log(changeInfo.favIconUrl);
-    }
-  }); 
+var fav = new Image();
+fav.src = "https://stackoverflow.com/favicon.ico";
+fav.onload = function(){
+    ctx.drawImage(fav,100,100,100,100);
+}
 
 function shadowRect(x,y,w,h,repeats,color){
     ctx.strokeStyle=color;

@@ -69,3 +69,31 @@ chrome.tabs.onRemoved.addListener(
     global_tab_queue.delete(tab);
   }
 );
+
+//ASDF
+chrome.tabs.onUpdated.addListener(function(tabId, changeInfo, tab) {
+  console.log("update");
+  if(changeInfo.favIconUrl != undefined){
+    console.log("changefavi");
+    console.log(changeInfo.favIconUrl);
+  }
+}); 
+
+
+
+chrome.runtime.onMessage.addListener(
+  function(request, sender, sendResponse) {
+    console.log(sender.tab ?
+                "from a content script:" + sender.tab.url :
+                "from the extension");
+    if (request.type === "0"){
+      console.log(request.type);
+      console.log(request.level);
+      sendResponse({resp: "asdfdbye"});
+    }
+    if (request.type === "1"){
+      console.log(request.thresholds);
+      sendResponse({resp: "WTF"});
+    }
+  }
+);
