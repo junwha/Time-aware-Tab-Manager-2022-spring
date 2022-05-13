@@ -14,10 +14,28 @@ const MIN_TO_MS = (60 * 1000);
 let currentActiveTab = [0, 0];
 let tabInfoList = [];
 
+function remove(tabIdList) {
+    chrome.tabs.remove(tabIdList).catch((e) => {
+        setTimeout(
+            () => remove(tabIdList),
+            TIMEOUT
+        );
+    });
+}
 chrome.runtime.onMessage.addListener(
     function (request, sender, sendResponse) {
         if (request.type == 0) { // Close tabs
-            console.log("close!!!:");
+            let tab_all_list = getTabListsByTime();
+
+            var tab_id_list = [];
+
+            for (const tab_info of tab_all_list[request.level]) {
+                tab_id_list.push(tab_info.getTabId());
+            }
+
+            remove(tab_id_list);
+
+            console.log("closed!!!:");
             console.log(request);
         } else if (request.type == 1) { // Update thresholds
             console.log(request);
