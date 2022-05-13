@@ -91,12 +91,11 @@ chrome.tabs.onActivated.addListener(
         if (t2 !== undefined)
             t2.setLastActivatedTime();
 
-        let [firstStage, secondStage] = getTabListsByTime();
         regroup();
     }
 );
 
-chrome.runtime.onUpdateAvailable.addListener(() => {
+chrome.runtime.onUpdateAvailable.addListener(async () => {
     chrome.runtime.reload()
 });
 
@@ -119,8 +118,10 @@ chrome.tabs.onRemoved.addListener(
 
 // Check the tabs periodically 
 setInterval(async () => {
-    let [firstStage, secondStage] = getTabListsByTime();
-    regroup(firstStage, secondStage);
+    let [t] = getTabFromList(currentActiveTab[0], currentActiveTab[1]);
+    if (t !== undefined)
+        t.setLastActivatedTime();
+    regroup();
 
 }, ALARM_INTERVAL);
 
@@ -134,6 +135,8 @@ function getTabListsByTime() {
 
     // Compare tab's idle time and threshold
     for (const tab of tabInfoList) {
+        if (tab.getTabId() == currentActiveTab[0] && tab.getActiveTime() < SKIP_THRESHOLD)
+            continue;
         let time = tab.getIdleTime();
         if (time < THRESHOLD[0] * MIN_TO_MS)
             continue;
@@ -147,7 +150,8 @@ function getTabListsByTime() {
 }
 
 // Regroup all collected tabs
-function regroup(firstStage, secondStage) {
+function regroup() {
+    let [firstStage, secondStage] = getTabListsByTime();
     ungroupAll();
     groupTabs(firstStage, THRESHOLD[0]);
     groupTabs(secondStage, THRESHOLD[1]);
