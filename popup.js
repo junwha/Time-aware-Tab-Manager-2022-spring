@@ -31,12 +31,15 @@ var thresholdValue2 = document.getElementById("thresholdValue2");
 
 var closeButton2 = document.getElementById("closeT2");
 var closeButton1 = document.getElementById("closeT1");
+let tabs_info = [[],[]];
 
 window.onload = function () {
     chrome.runtime.sendMessage({ type: "2" }, function (response) {
         console.log(response);
-        console.log(response.tab_info["first"]);
-        console.log(response.tab_info["second"]);
+        console.log(response["tab_info"]["first"]);
+        console.log(response["tab_info"]["second"]);
+        tabs_info[0] = response["tab_info"]["first"];
+        tabs_info[1] = response["tab_info"]["first"];
     });
 }
 
