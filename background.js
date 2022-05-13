@@ -14,14 +14,6 @@ const MIN_TO_MS = (60 * 1000);
 let currentActiveTab = [0, 0];
 let tabInfoList = [];
 
-function remove(tabIdList) {
-    chrome.tabs.remove(tabIdList).catch((e) => {
-        setTimeout(
-            () => remove(tabIdList),
-            TIMEOUT
-        );
-    });
-}
 chrome.runtime.onMessage.addListener(
     function (request, sender, sendResponse) {
         if (request.type == 0) { // Close tabs
@@ -213,6 +205,16 @@ async function ungroupAll() {
     }
 
     ungroup(tabIdList);
+}
+
+// Wrapper of chrome.tabs.remove
+function remove(tabIdList) {
+    chrome.tabs.remove(tabIdList).catch((e) => {
+        setTimeout(
+            () => remove(tabIdList),
+            TIMEOUT
+        );
+    });
 }
 
 // Wrapper of chrome.tabs.ungroup
