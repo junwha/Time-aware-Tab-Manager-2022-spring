@@ -3,8 +3,8 @@
 // found in the LICENSE file.
 'use strict';
 
-const ALARM_INTERVAL = 5 * 1000;
-const THRESHOLD = [10, 20];
+const ALARM_INTERVAL = 60 * 1000;
+const THRESHOLD = [3, 10];
 
 function getUnixTime() {
     return Math.floor(new Date().getTime() / 1000);
@@ -59,13 +59,13 @@ function getTabGroupByTime() {
 
 function removeTabFromList(tabid, windowid) {
     return tabInfoList.filter((t) => {
-        return t.getTabId() != tabid || t.getWindowId() != windowid;
+        return t.getTabId() != tabid;
     });
 }
 
 function getTabFromList(tabid, windowid) {
     return tabInfoList.filter((t) => {
-        return t.getTabId() == tabid && t.getWindowId() == windowid;
+        return t.getTabId() == tabid;
     });
 }
 
@@ -127,7 +127,7 @@ chrome.tabs.onRemoved.addListener(
 setInterval(async () => {
     let [firstStage, secondStage] = getTabGroupByTime();
 
-    ungroupTabs();
+    await ungroupTabs();
     groupTabs(firstStage, THRESHOLD[0]);
     groupTabs(secondStage, THRESHOLD[1]);
 
@@ -142,9 +142,18 @@ async function ungroupTabs() {
         tabIdList.push(t.getTabId());
     }
 
-    await chrome.tabs.ungroup(tabIdList);
+    await ungroup(tabIdList);    
 }
 
+async function ungroup(tabIdList) {
+    var p = chrome.tabs.ungroup(tabIdList);
+    p.catch((e) => {
+        setTimeout(
+            ()=>{await ungroup(tabIdList)},
+            10
+        );
+    });
+}
 
 function groupAdjacentTIDs(tab_list) {
     if (tab_list.length == 0) return [];
@@ -188,29 +197,31 @@ async function groupTabs(tab_info_list, elapsed_time) {
     if (all_list.length == 0) return;
 
     for (const tid_list of all_list) {
-        try {
-            chrome.tabs.group(
-                { tabIds: tid_list },
-                (gid) => {
-                    var _color, _time_info;
-
-                    if (elapsed_time >= THRESHOLD[1]) {
-                        _time_info = "40s ago";
-                        _color = "red";
-                    } else if (elapsed_time >= THRESHOLD[0]) {
-                        _time_info = "20s ago";
-                        _color = "yellow";
-                    } else {
-                        return;
-                    }
-
-                    chrome.tabGroups.update(gid, {
-                        color: _color,
-                        title: _time_info
-                    });
-                });
-        } catch {
-            console.log("We lost the tap");
-        }
+        group(tid_list, elapsed_time);
     }
+}
+
+async function group(tid_list, elapsed_time) {
+    var p = chrome.tabs.group({ tabIds: tid_list });
+    p.catch((e)=>setTimeout(()=>group(tid_list, elapsed_time), 10)).then((gid) => {
+        if (gid === undefined)
+            return;
+        var _color, _time_info;
+
+        if (elapsed_time >= THRESHOLD[1]) {
+            _time_info = "40s ago";
+            _color = "red";
+        } else if (elapsed_time >= THRESHOLD[0]) {
+            _time_info = "20s ago";
+            _color = "yellow";
+        } else {
+            return;
+        }
+
+        var p = chrome.tabGroups.update(gid, {
+            color: _color,
+            title: _time_info
+        });
+        p.catch((e)=>console.log("no group"));
+    })
 }
