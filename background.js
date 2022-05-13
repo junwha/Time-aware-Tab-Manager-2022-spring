@@ -3,69 +3,270 @@
 // found in the LICENSE file.
 'use strict';
 
-const global_tab_queue = new Set();
-const waiting_queue = new Set();
+const ALARM_INTERVAL = 2 * 1000; // Threshold for update groups (milliseconds)
+const THRESHOLD = [0.2, 1]; // Threshold for first and second stage (minute)
+const SKIP_THRESHOLD = 2000; // Threshold for removing current visiting tab from target (milliseconds)
 
-async function getCurrentTab() {
-  let queryOptions = { active: true, currentWindow: true };
-  let [tab] = await chrome.tabs.query(queryOptions);
-  return tab;
+// Constants
+const TIMEOUT = 100;
+const MIN_TO_MS = (60 * 1000);
+
+let currentActiveTab = [0, 0];
+let tabInfoList = [];
+
+/// Class for storing information of tabs.
+// It maintains time information and window information
+// You can get the tab by using chrome.tabs.get(tabInfo.getTabId());
+class TabInfo {
+    constructor(tab_id, window_id) {
+        this.tab_id = tab_id;
+        this.window_id = window_id;
+        this.lastDeactivatedTime = getUnixTime();
+        this.lastActivatedTime = getUnixTime();
+    }
+
+    // Getters
+    getTabId() {
+        return this.tab_id;
+    }
+
+    getWindowId() {
+        return this.window_id;
+    }
+
+    getIdleTime() {
+        return getUnixTime() - this.lastDeactivatedTime;
+    }
+
+    getActiveTime() {
+        return getUnixTime() - this.lastActivatedTime;
+    }
+
+    // Setters
+    setLastDeactivatedTime() {
+        this.lastDeactivatedTime = getUnixTime();
+    }
+
+    setLastActivatedTime() {
+        this.lastActivatedTime = getUnixTime();
+    }
 }
 
-async function updateWaitingQueue() {
-  let current_tab = getCurrentTab();
-  global_tab_queue.forEach(function (tab) {
-    if (tab.index === current_tab.index) {
-      //don't add
-      waiting_queue.delete(tab);
-    }
-    else {
-      waiting_queue.add(tab);
-    }
-  });
+
+/// Utils
+
+function getUnixTime() {
+    return Math.floor(new Date().getTime());
 }
 
-chrome.alarms.onAlarm.addListener(() => {
-  chrome.action.setBadgeText({ text: '' });
-  chrome.notifications.create({
-    type: 'basic',
-    //iconUrl: 'stay_hydrated.png',
-    title: 'You have an unused tab',
-    message: 'Check tab status',
-    priority: 0
-  });
-});
+function removeTabFromList(tab_id, windowid) {
+    return tabInfoList.filter((t) => {
+        return t.getTabId() != tab_id;
+    });
+}
+
+function getTabFromList(tab_id, window_id) {
+    return tabInfoList.filter((t) => {
+        return t.getTabId() == tab_id;
+    });
+}
+
+/// Listeners 
 
 chrome.runtime.onStartup.addListener(
-  async () => {
-    chrome.runtime.connect();
-    const tab = getCurrentTab();
-    console.log('tab created ' + tab.index);
-    chrome.alarms.create({
-      name: "Periodic check",
-      periodInMinutes: 2
-    });
-  }
+    async () => {
+        chrome.runtime.connect();
+    }
 );
+
+chrome.tabs.onActivated.addListener(
+    async (tab) => {
+        let [t] = getTabFromList(currentActiveTab[0], currentActiveTab[1]);
+        currentActiveTab = [tab.tabId, tab.windowId];
+        if (t !== undefined)
+            if (t.getActiveTime() > SKIP_THRESHOLD)
+                t.setLastDeactivatedTime();
+
+        let [t2] = getTabFromList(currentActiveTab[0], currentActiveTab[1]);
+        if (t2 !== undefined)
+            t2.setLastActivatedTime();
+
+        regroup();
+    }
+);
+
+chrome.runtime.onUpdateAvailable.addListener(async () => {
+    chrome.runtime.reload()
+});
 
 //add tab into 
 chrome.tabs.onCreated.addListener(
-  async (tab) => {
-    console.log('tab created '+tab.index);
-    var current_date = new Date();
-    console.log('created time');
-    console.log(current_date);
-    global_tab_queue.add(tab);
-  }
+    async (tab) => {
+        var current_date = new Date();
+        var tabInfo = new TabInfo(tab.id, tab.windowId);
+        tabInfoList.push(tabInfo);
+    }
 );
 
 //delete tab from list
 chrome.tabs.onRemoved.addListener(
-  async (tab) => {
-    console.log('tab deleted ' + tab.index);
-    var current_date = new Date();
-    console.log('deleted time');
-    console.log(current_date);
-    global_tab_queue.delete(tab);
-  }
+    async (tab_id, info) => {
+        var current_date = new Date();
+        tabInfoList = removeTabFromList(tab_id, info.windowId);
+    }
 );
+
+// Check the tabs periodically 
+setInterval(() => {
+    let [t] = getTabFromList(currentActiveTab[0], currentActiveTab[1]);
+    if (t !== undefined)
+        t.setLastActivatedTime();
+    regroup();
+}, ALARM_INTERVAL);
+
+
+/// Main Logic
+
+// Return two tab lists satisfying thresholds
+function getTabListsByTime() {
+    let firstStage = [];
+    let secondStage = [];
+
+    // Compare tab's idle time and threshold
+    for (const tab of tabInfoList) {
+        if (tab.getTabId() == currentActiveTab[0] && tab.getActiveTime() < SKIP_THRESHOLD)
+            continue;
+        let time = tab.getIdleTime();
+        if (time < THRESHOLD[0] * MIN_TO_MS)
+            continue;
+        else if (time < THRESHOLD[1] * MIN_TO_MS)
+            firstStage.push(tab);
+        else
+            secondStage.push(tab);
+    }
+
+    return [firstStage, secondStage];
+}
+
+// Regroup all collected tabs
+function regroup() {
+    let [firstStage, secondStage] = getTabListsByTime();
+    ungroupAll();
+    groupTabs(firstStage, THRESHOLD[0]);
+    groupTabs(secondStage, THRESHOLD[1]);
+}
+
+// Ungroup all tabs in current state
+async function ungroupAll() {
+    if (tabInfoList.length == 0)
+        return;
+
+    var tabIdList = [];
+
+    for (const t of tabInfoList) {
+        tabIdList.push(t.getTabId());
+    }
+
+    ungroup(tabIdList);
+}
+
+// Wrapper of chrome.tabs.ungroup
+async function ungroup(tabIdList) {
+    chrome.tabs.ungroup(tabIdList).catch((e) => {
+        setTimeout(
+            () => ungroup(tabIdList),
+            TIMEOUT
+        );
+    });
+}
+
+// This function returns two-dimension array,
+// each array is the tabs which are adjacent
+function groupAdjacentTIDs(tab_list) {
+    if (tab_list.length == 0) return [];
+
+    var all_list = new Array();
+
+    tab_list.sort(function (a, b) {
+        return a.index - b.index;
+    });
+
+    var last_index = tab_list[0].index - 1;
+    var each_list = new Array();
+
+    for (const tab of tab_list) {
+        if (tab.index - 1 != last_index) {
+            all_list.push(each_list);
+            each_list = new Array();
+        }
+
+        each_list.push(tab.id);
+        last_index = tab.index;
+    }
+
+    if (each_list.length != 0) all_list.push(each_list);
+
+    return all_list;
+}
+
+// Group all tabs
+async function groupTabs(tab_info_list, elapsed_time) {
+    if (tab_info_list.length == 0)
+        return;
+    var prom_list = [];
+
+    for (const tab_info of tab_info_list) {
+        prom_list.push(chrome.tabs.get(tab_info.getTabId()));
+    }
+    Promise.all(prom_list).then((tab_list) => {
+        tab_list.sort(function(a, b) {
+            return a.windowId - b.windowId;
+        });
+        tab_list.push(new TabInfo(0, 0));
+        var tmp_list = [];
+        for (let i = 0; i < tab_list.length; i++) {
+            if (i == 0)
+                tmp_list.push(tab_list[i]);
+            else {
+                if (tab_list[i].windowId != tab_list[i-1].windowId) {
+                    var all_list = groupAdjacentTIDs(tmp_list);
+                    var winid = tmp_list[0].windowId;
+
+                    if (all_list.length == 0) return;
+            
+                    for (const tid_list of all_list) {
+                        group(tid_list, elapsed_time, winid);
+                    }
+                    tmp_list = [];
+                }
+                tmp_list.push(tab_list[i]);
+            }
+        }
+    });
+}
+
+// Wrapper of chrome.tabs.group
+async function group(tid_list, elapsed_time, winid) {
+    chrome.tabs.group({ createProperties: { windowId: winid }, tabIds: tid_list }).catch((e) => setTimeout(() => group(tid_list, elapsed_time), TIMEOUT)).then((gid) => {
+        if (gid === undefined)
+            return;
+        console.log(gid);
+        var _color, _time_info;
+
+        if (elapsed_time >= THRESHOLD[1]) {
+            _time_info = `${THRESHOLD[1]}m`;
+            _color = "red";
+        } else if (elapsed_time >= THRESHOLD[0]) {
+            _time_info = `${THRESHOLD[0]}m`;
+            _color = "yellow";
+        } else {
+            return;
+        }
+
+        var p = chrome.tabGroups.update(gid, {
+            color: _color,
+            title: _time_info
+        });
+        p.catch((e) => console.log("[Exception] no group"));
+    })
+}
