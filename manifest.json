@@ -16,11 +16,5 @@
   "action": {
     "default_title": "Drink Water Event",
     "default_popup": "popup.html"
-  },
-  "icons": {
-    "16": "drink_water16.png",
-    "32": "drink_water32.png",
-    "48": "drink_water48.png",
-    "128": "drink_water128.png"
   }
 }
