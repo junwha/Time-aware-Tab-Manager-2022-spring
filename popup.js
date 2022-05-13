@@ -49,14 +49,6 @@ thresholdBar2.oninput = function(){
     chrome.storage.sync.set({"threshold2": thresholdBar2.value});
 }
 
-chrome.tabs.onUpdated.addListener(function(tabId, changeInfo, tab) {
-    console.log("update");
-    if(changeInfo.favIconUrl != undefined){
-      console.log("changefavi");
-      console.log(changeInfo.favIconUrl);
-    }
-  }); 
-
 function shadowRect(x,y,w,h,repeats,color){
     ctx.strokeStyle=color;
     ctx.shadowColor=color;
