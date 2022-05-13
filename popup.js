@@ -22,13 +22,6 @@ for (let i = 0; i < 2; i++){
     ctx.fillStyle = '#EEEEEE';
     ctx.strokeStyle = "#CCCCCC"
     roundRect(ctx, rect_x + 260 * i, rect_y, 220, 160, 10, true, true);
-    // for (let j = 0; j < 2; j++){
-    //     shadowRect(rect_x + 260 * j + 5, rect_y + 200 * i + 5, 215, 155, 10, '#DDDDDD');
-        
-    //     ctx.fillStyle = '#EEEEEE';
-    //     ctx.strokeStyle = "#CCCCCC"
-    //     roundRect(ctx, rect_x + 260 * j, rect_y + 200 * i, 220, 160, 10, true, true);
-    // }
 }
 
 var thresholdBar1 = document.getElementById("thresholdRange1");
@@ -38,8 +31,13 @@ var thresholdValue2 = document.getElementById("thresholdValue2");
 
 var closeButton2 = document.getElementById("closeT2");
 var closeButton1 = document.getElementById("closeT1");
-// var closeButton2 = document.getElementById("close2");
-// var closeButtone = document.getElementById("closee");
+
+window.onload = function() {
+    chrome.runtime.sendMessage({type:"2"}, function(response) {
+        console.log(response.tabinfo["first"]);
+        console.log(response.tabinfo["second"]);
+    });
+}
 
 chrome.storage.sync.get(["threshold1","threshold2"], function(items){
     thresholdBar1.value = items["threshold1"];
@@ -60,12 +58,6 @@ closeButton1.onclick = function(){
     });
     console.log("Close T1 Clicked");
 }
-// closeButton2.onclick = function(){
-//     console.log("Close 2 Clicked");
-// }
-// closeButtone.onclick = function(){
-//     console.log("Close e Clicked");
-// }
 
 thresholdBar1.oninput = function(){
     thresholdValue1.innerHTML = thresholdBar1.value;

@@ -1,5 +1,5 @@
 {
-  "name": "Drink Water Event Popup",
+  "name": "Time aware Tab Manager",
   "description": "Demonstrates usage and features of the event page by reminding user to drink water",
   "version": "1.0",
   "manifest_version": 3,
@@ -14,7 +14,7 @@
     "service_worker": "background.js"
   },
   "action": {
-    "default_title": "Drink Water Event",
+    "default_title": "Time aware Tab Manager",
     "default_popup": "popup.html"
   },
   "icons": {
