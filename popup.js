@@ -26,12 +26,37 @@ for (let i = 0; i < 2; i++){
     }
 }
 
-var thresholdBar = document.getElementById("thresholdRange");
-var y = document.getElementById("thresholdValue");
-thresholdBar.oninput = function(){
+var thresholdBar1 = document.getElementById("thresholdRange1");
+var val1 = document.getElementById("thresholdValue1"); 
+var thresholdBar2 = document.getElementById("thresholdRange2");
+var val2 = document.getElementById("thresholdValue2");
+
+chrome.storage.sync.get(["threshold1","threshold2"], function(items){
+    thresholdBar1.value = items["threshold1"];
+    thresholdBar2.value = items["threshold2"];
+    val1.innerHTML = thresholdBar1.value;
+    val2.innerHTML = thresholdBar2.value;
+});
+
+thresholdBar1.oninput = function(){
     console.log(this.value);
-    y.innerHTML = thresholdBar.value;
+    val1.innerHTML = thresholdBar1.value;
+    chrome.storage.sync.set({"threshold1": thresholdBar1.value});
 }
+thresholdBar2.oninput = function(){
+    console.log(this.value);
+    val2.innerHTML = thresholdBar2.value;
+    chrome.storage.sync.set({"threshold2": thresholdBar2.value});
+}
+
+chrome.tabs.onUpdated.addListener(function(tabId, changeInfo, tab) {
+    console.log("update");
+    if(changeInfo.favIconUrl != undefined){
+      console.log("changefavi");
+      console.log(changeInfo.favIconUrl);
+    }
+  }); 
+
 function shadowRect(x,y,w,h,repeats,color){
     ctx.strokeStyle=color;
     ctx.shadowColor=color;
@@ -78,4 +103,14 @@ function roundRect(ctx, x, y, width, height, radius, fill, stroke) {
     if (stroke) {
         ctx.stroke();
     }
+}
+
+function max(a,b) {
+    if(a > b) return a;
+    else return b;
+}
+
+function min(a,b) {
+    if(a > b) return b;
+    else return a;
 }
