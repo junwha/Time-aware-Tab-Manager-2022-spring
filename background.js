@@ -6,22 +6,50 @@
 const global_tab_queue = new Set();
 const waiting_queue = new Set();
 
+class TabInfo {
+  constructor(tabid, windowid, favIconUrl) {
+      this.tabid = tabid;
+      this.windowid = windowid;
+      this.lastDeactivatedTime = 0;
+      this.favIconUrl = favIconUrl;
+  }
+
+  getTabId() {
+      return this.tabid;
+  }
+
+  getWindowId() {
+      return this.windowid;
+  }
+
+  getIdleTime() {
+      return getUnixTime() - this.lastDeactivatedTime;
+  }
+
+  setLastDeactivatedTime() {
+      this.lastDeactivatedTime = getUnixTime();
+  }
+
+}
+
+let currentActiveTab = [0, 0];
+let tabInfoList = [];
+
 async function getCurrentTab() {
   let queryOptions = { active: true, currentWindow: true };
   let [tab] = await chrome.tabs.query(queryOptions);
   return tab;
 }
 
-async function updateWaitingQueue() {
-  let current_tab = getCurrentTab();
-  global_tab_queue.forEach(function (tab) {
-    if (tab.index === current_tab.index) {
-      //don't add
-      waiting_queue.delete(tab);
-    }
-    else {
-      waiting_queue.add(tab);
-    }
+function removeTabFromList(tabid, windowid) {
+  return tabInfoList.filter((t) => {
+      return t.getTabId() != tabid;
+  });
+}
+
+function getTabFromList(tab_id, window_id) {
+  return tabInfoList.filter((t) => {
+      return t.getTabId() == tab_id;
   });
 }
 
@@ -48,25 +76,40 @@ chrome.runtime.onStartup.addListener(
   }
 );
 
+chrome.tabs.onUpdated.addListener(function(tabId, changeInfo, tab) {
+  console.log("update");
+  if(changeInfo.favIconUrl != undefined){
+    let [t] = getTabFromList(tab.id, tab.windowId);
+    if (t !== undefined){
+      tabInfoList = removeTabFromList(tab.id, tab.windowId);
+      var tabInfo = new TabInfo(tab.id, tab.windowId, changeInfo.favIconUrl);
+      tabInfoList.push(tabInfo);
+    }
+    console.log(changeInfo.favIconUrl);
+  }
+  console.log(tabInfoList);
+}); 
+
 //add tab into 
 chrome.tabs.onCreated.addListener(
   async (tab) => {
-    console.log('tab created '+tab.index);
-    var current_date = new Date();
-    console.log('created time');
-    console.log(current_date);
-    global_tab_queue.add(tab);
+      console.log(`tab created ${tab.id} ${tab.windowId}`);
+      var current_date = new Date();
+      console.log('created time');
+      console.log(current_date);
+      var tabInfo = new TabInfo(tab.id, tab.windowId, tab.favIconUrl);
+      tabInfoList.push(tabInfo);
   }
 );
 
 //delete tab from list
 chrome.tabs.onRemoved.addListener(
-  async (tab) => {
-    console.log('tab deleted ' + tab.index);
-    var current_date = new Date();
-    console.log('deleted time');
-    console.log(current_date);
-    global_tab_queue.delete(tab);
+  async (tabid, info) => {
+      console.log(`tab deleted ${tabid} ${info.windowId}`);
+      var current_date = new Date();
+      console.log('deleted time');
+      console.log(current_date);
+      tabInfoList = removeTabFromList(tabid, info.windowId);
   }
 );
 
