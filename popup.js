@@ -39,7 +39,7 @@ window.onload = function () {
         console.log(response["tab_info"]["first"]);
         console.log(response["tab_info"]["second"]);
         tabs_info[0] = response["tab_info"]["first"];
-        tabs_info[1] = response["tab_info"]["first"];
+        tabs_info[1] = response["tab_info"]["second"];
     });
 }
 
