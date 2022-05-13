@@ -5,6 +5,7 @@
 
 const ALARM_INTERVAL = 60 * 1000;
 const THRESHOLD = [3, 10];
+const TIMEOUT = 100;
 
 function getUnixTime() {
     return Math.floor(new Date().getTime() / 1000);
@@ -101,6 +102,10 @@ chrome.tabs.onActivated.addListener(
     }
 );
 
+chrome.runtime.onUpdateAvailable.addListener(() => {
+  chrome.runtime.reload()
+});
+
 //add tab into 
 chrome.tabs.onCreated.addListener(
     async (tab) => {
@@ -146,11 +151,10 @@ async function ungroupTabs() {
 }
 
 async function ungroup(tabIdList) {
-    var p = chrome.tabs.ungroup(tabIdList);
-    p.catch((e) => {
+    chrome.tabs.ungroup(tabIdList).catch((e) => {
         setTimeout(
-            ()=>{await ungroup(tabIdList)},
-            10
+            ()=>ungroup(tabIdList),
+            TIMEOUT
         );
     });
 }
@@ -202,8 +206,7 @@ async function groupTabs(tab_info_list, elapsed_time) {
 }
 
 async function group(tid_list, elapsed_time) {
-    var p = chrome.tabs.group({ tabIds: tid_list });
-    p.catch((e)=>setTimeout(()=>group(tid_list, elapsed_time), 10)).then((gid) => {
+    chrome.tabs.group({ tabIds: tid_list }).catch((e)=>setTimeout(()=>group(tid_list, elapsed_time), TIMEOUT)).then((gid) => {
         if (gid === undefined)
             return;
         var _color, _time_info;
