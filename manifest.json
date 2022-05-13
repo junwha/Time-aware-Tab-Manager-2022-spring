@@ -1,6 +1,6 @@
 {
-  "name": "Drink Water Event Popup",
-  "description": "Demonstrates usage and features of the event page by reminding user to drink water",
+  "name": "Time Aware Tab Manager",
+  "description": "CSE333 HCI Human Cats Interation Team",
   "version": "1.0",
   "manifest_version": 3,
   "permissions": [
@@ -8,7 +8,8 @@
     "notifications",
     "storage",
     "tabs",
-    "tabGroups"
+    "tabGroups",
+    "storage"
   ],
   "background": {
     "service_worker": "background.js"
