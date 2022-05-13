@@ -4,17 +4,20 @@
 'use strict';
 
 const ALARM_INTERVAL = 60 * 1000; 
-const THRESHOLD = [1, 2];
+const THRESHOLD = [0.2, 1];
+const SKIP_THRESHOLD = 2000;
 const TIMEOUT = 100;
+const MIN_TO_MS = (60 * 1000);
 
 function getUnixTime() {
-    return Math.floor(new Date().getTime() / (60 * 1000));
+    return Math.floor(new Date().getTime());
 }
 class TabInfo {
     constructor(tabid, windowid) {
         this.tabid = tabid;
         this.windowid = windowid;
-        this.lastDeactivatedTime = 0;
+        this.lastDeactivatedTime = getUnixTime();
+        this.lastActivatedTime = getUnixTime();
     }
 
     getTabId() {
@@ -29,8 +32,16 @@ class TabInfo {
         return getUnixTime() - this.lastDeactivatedTime;
     }
 
+    getActiveTime() {
+        return getUnixTime() - this.lastActivatedTime;
+    }
+
     setLastDeactivatedTime() {
         this.lastDeactivatedTime = getUnixTime();
+    }
+
+    setLastActivatedTime() {
+        this.lastActivatedTime = getUnixTime();
     }
 }
 
@@ -41,12 +52,12 @@ function getTabGroupByTime() {
     let firstStage = [];
     let secondStage = [];
     for (const tab of tabInfoList) {
-        if (tab.getTabId() == currentActiveTab[0] && tab.getWindowId() == currentActiveTab[1])
-            continue;
+        //if (tab.getTabId() == currentActiveTab[0] && tab.getWindowId() == currentActiveTab[1])
+        //    continue;
         let time = tab.getIdleTime();
-        if (time < THRESHOLD[0])
+        if (time < THRESHOLD[0] * MIN_TO_MS)
             continue;
-        else if (THRESHOLD[0] <= time && time < THRESHOLD[1])
+        else if (THRESHOLD[0] * MIN_TO_MS <= time && time < THRESHOLD[1] * MIN_TO_MS)
             firstStage.push(tab);
         else
             secondStage.push(tab);
@@ -93,7 +104,12 @@ chrome.tabs.onActivated.addListener(
         let [t] = getTabFromList(currentActiveTab[0], currentActiveTab[1]);
         currentActiveTab = [tab.tabId, tab.windowId];
         if (t !== undefined)
-            t.setLastDeactivatedTime();
+            if (t.getActiveTime() > SKIP_THRESHOLD)
+                t.setLastDeactivatedTime();
+
+        let [t2] = getTabFromList(currentActiveTab[0], currentActiveTab[1]);
+        if (t2 !== undefined)
+            t2.setLastActivatedTime();
         
         let [firstStage, secondStage] = getTabGroupByTime();
         ungroupTabs();
@@ -190,19 +206,20 @@ function groupAdjacentTIDs(tab_list) {
 async function groupTabs(tab_info_list, elapsed_time) {
     if (tab_info_list.length == 0)
         return;
-    var tab_list = [];
+    var prom_list = [];
 
     for (const tab_info of tab_info_list) {
-        tab_list.push(await chrome.tabs.get(tab_info.getTabId()));
+        prom_list.push(chrome.tabs.get(tab_info.getTabId()));
     }
+    Promise.all(prom_list).then((tab_list)=>{
+        var all_list = groupAdjacentTIDs(tab_list);
 
-    var all_list = groupAdjacentTIDs(tab_list);
+        if (all_list.length == 0) return;
 
-    if (all_list.length == 0) return;
-
-    for (const tid_list of all_list) {
-        group(tid_list, elapsed_time);
-    }
+        for (const tid_list of all_list) {
+            group(tid_list, elapsed_time);
+        }
+    });
 }
 
 async function group(tid_list, elapsed_time) {
