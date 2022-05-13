@@ -3,27 +3,72 @@
 // found in the LICENSE file.
 'use strict';
 
-const global_tab_queue = new Set();
-const waiting_queue = new Set();
+const ALARM_INTERVAL = 5*1000;
+const THRESHOLD = [20, 40];
 
-async function getCurrentTab() {
-  let queryOptions = { active: true, currentWindow: true };
-  let [tab] = await chrome.tabs.query(queryOptions);
-  return tab;
+function getUnixTime() {
+    return Math.floor(new Date().getTime() / 1000);
+}
+class TabInfo {
+    constructor(tabid, windowid) {
+        this.tabid = tabid;
+        this.windowid = windowid;
+        this.lastDeactivatedTime = 0;
+    }
+
+    getTabId() {
+        return this.tabid;
+    }
+
+    getWindowId() {
+        return this.windowid;
+    }
+
+    getIdleTime() {
+        return getUnixTime() - this.lastDeactivatedTime;
+    }
+
+    setLastDeactivatedTime() {
+        this.lastDeactivatedTime = getUnixTime();
+    }
 }
 
-async function updateWaitingQueue() {
-  let current_tab = getCurrentTab();
-  global_tab_queue.forEach(function (tab) {
-    if (tab.index === current_tab.index) {
-      //don't add
-      waiting_queue.delete(tab);
+let currentActiveTab = [0, 0];
+let tabInfoList = [];
+
+function getTabGroupByTime() {
+    let firstStage = [];
+    let secondStage = [];
+    for (const tab of tabInfoList) {
+        if (tab.getTabId() == currentActiveTab[0] && tab.getWindowId() == currentActiveTab[1])
+            continue;
+        let time = tab.getIdleTime();
+        if (time < THRESHOLD[0])
+            continue;
+        else if (THRESHOLD[0] <= time && time < THRESHOLD[1])
+            firstStage.push(tab);
+        else
+            secondStage.push(tab);
     }
-    else {
-      waiting_queue.add(tab);
-    }
-  });
+    console.log("first");
+    console.log(firstStage);
+    console.log("second");
+    console.log(secondStage);
+    return [firstStage, secondStage];
 }
+
+function removeTabFromList(tabid, windowid) {
+    return tabInfoList.filter((t) => {
+        return t.getTabId() != tabid || t.getWindowId() != windowid;
+    });
+}
+
+function getTabFromList(tabid, windowid) {
+    return tabInfoList.filter((t) => {
+        return t.getTabId() == tabid && t.getWindowId() == windowid;
+    });
+}
+
 
 chrome.alarms.onAlarm.addListener(() => {
   chrome.action.setBadgeText({ text: '' });
@@ -39,33 +84,41 @@ chrome.alarms.onAlarm.addListener(() => {
 chrome.runtime.onStartup.addListener(
   async () => {
     chrome.runtime.connect();
-    const tab = getCurrentTab();
-    console.log('tab created ' + tab.index);
-    chrome.alarms.create({
-      name: "Periodic check",
-      periodInMinutes: 2
-    });
   }
+);
+
+chrome.tabs.onActivated.addListener(
+    (tab) => {
+        let [t] = getTabFromList(currentActiveTab[0], currentActiveTab[1]);
+        currentActiveTab = [tab.tabId, tab.windowId];
+        if (t !== undefined)
+            t.setLastDeactivatedTime();
+    }
 );
 
 //add tab into 
 chrome.tabs.onCreated.addListener(
   async (tab) => {
-    console.log('tab created '+tab.index);
+    console.log(`tab created ${tab.id} ${tab.windowId}`);
     var current_date = new Date();
     console.log('created time');
     console.log(current_date);
-    global_tab_queue.add(tab);
+    var tabInfo = new TabInfo(tab.id, tab.windowId);
+    tabInfoList.push(tabInfo);
   }
 );
 
 //delete tab from list
 chrome.tabs.onRemoved.addListener(
-  async (tab) => {
-    console.log('tab deleted ' + tab.index);
+  async (tabid, info) => {
+    console.log(`tab deleted ${tabid} ${info.windowId}`);
     var current_date = new Date();
     console.log('deleted time');
     console.log(current_date);
-    global_tab_queue.delete(tab);
+    tabInfoList = removeTabFromList(tabid, info.windowId);
   }
 );
+
+setInterval(() => {
+    let [firstStage, secondStage] = getTabGroupByTime();
+}, ALARM_INTERVAL);
