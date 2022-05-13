@@ -26,6 +26,12 @@ for (let i = 0; i < 2; i++){
     }
 }
 
+var thresholdBar = document.getElementById("thresholdRange");
+var y = document.getElementById("thresholdValue");
+thresholdBar.oninput = function(){
+    console.log(this.value);
+    y.innerHTML = thresholdBar.value;
+}
 function shadowRect(x,y,w,h,repeats,color){
     ctx.strokeStyle=color;
     ctx.shadowColor=color;
