@@ -4,7 +4,7 @@
 'use strict';
 
 const ALARM_INTERVAL = 2 * 1000; // Threshold for update groups (milliseconds)
-const THRESHOLD = [0.2, 1]; // Threshold for first and second stage (minute)
+let THRESHOLD = [0.2, 1]; // Threshold for first and second stage (minute)
 const SKIP_THRESHOLD = 2000; // Threshold for removing current visiting tab from target (milliseconds)
 
 // Constants
@@ -17,10 +17,12 @@ let tabInfoList = [];
 chrome.runtime.onMessage.addListener(
     function (request, sender, sendResponse) {
         if (request.type == 0) { // Close tabs
-            console.log("close!!!");
+            console.log("close!!!:");
+            console.log(request);
         } else if (request.type == 1) { // Update thresholds
-            THRESHOLD[0] = request.level[0];
-            THRESHOLD[1] = request.level[1];
+            console.log(request);
+            THRESHOLD[0] = request.thresholds[0];
+            THRESHOLD[1] = request.thresholds[1];
             console.log("threshold complete!!!");
         } else if (request.type == 2) {
             let [firstStage, secondStage] = getTabListsByTime();
