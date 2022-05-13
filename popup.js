@@ -34,8 +34,9 @@ var closeButton1 = document.getElementById("closeT1");
 
 window.onload = function () {
     chrome.runtime.sendMessage({ type: "2" }, function (response) {
-        console.log(response.tabinfo["first"]);
-        console.log(response.tabinfo["second"]);
+        console.log(response);
+        console.log(response.tab_info["first"]);
+        console.log(response.tab_info["second"]);
     });
 }
 
