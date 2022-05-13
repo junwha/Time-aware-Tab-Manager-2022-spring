@@ -93,11 +93,8 @@ chrome.tabs.onActivated.addListener(
         currentActiveTab = [tab.tabId, tab.windowId];
         if (t !== undefined)
             t.setLastDeactivatedTime();
-        
-        let [firstStage, secondStage] = getTabGroupByTime();
-        ungroupTabs();
-        groupTabs(firstStage, THRESHOLD[0]);
-        groupTabs(secondStage, THRESHOLD[1]);
+
+        regroupTabs();
     }
 );
 
@@ -123,14 +120,21 @@ chrome.tabs.onRemoved.addListener(
         tabInfoList = removeTabFromList(tabid, info.windowId);
     }
 );
+async function regroupTabs() {
+    try {
+        let [firstStage, secondStage] = getTabGroupByTime();
 
+        await ungroupTabs();
+        await groupTabs(firstStage, THRESHOLD[0]);
+        await groupTabs(secondStage, THRESHOLD[1]);
+    } catch {
+        // setTimeout(function () {
+        //     regroupTabs();;
+        // }, 100);
+    }
+}
 setInterval(async () => {
-    let [firstStage, secondStage] = getTabGroupByTime();
-
-    ungroupTabs();
-    groupTabs(firstStage, THRESHOLD[0]);
-    groupTabs(secondStage, THRESHOLD[1]);
-
+    regroupTabs();
 }, ALARM_INTERVAL);
 
 async function ungroupTabs() {
@@ -188,29 +192,25 @@ async function groupTabs(tab_info_list, elapsed_time) {
     if (all_list.length == 0) return;
 
     for (const tid_list of all_list) {
-        try {
-            chrome.tabs.group(
-                { tabIds: tid_list },
-                (gid) => {
-                    var _color, _time_info;
+        var gid = await chrome.tabs.group(
+            { tabIds: tid_list },
+        );
 
-                    if (elapsed_time >= THRESHOLD[1]) {
-                        _time_info = "40s ago";
-                        _color = "red";
-                    } else if (elapsed_time >= THRESHOLD[0]) {
-                        _time_info = "20s ago";
-                        _color = "yellow";
-                    } else {
-                        return;
-                    }
+        var _color, _time_info;
 
-                    chrome.tabGroups.update(gid, {
-                        color: _color,
-                        title: _time_info
-                    });
-                });
-        } catch {
-            console.log("We lost the tap");
+        if (elapsed_time >= THRESHOLD[1]) {
+            _time_info = THRESHOLD[1] + "s";
+            _color = "red";
+        } else if (elapsed_time >= THRESHOLD[0]) {
+            _time_info = THRESHOLD[0] + "s";
+            _color = "yellow";
+        } else {
+            return;
         }
+
+        await chrome.tabGroups.update(gid, {
+            color: _color,
+            title: _time_info
+        });
     }
 }
