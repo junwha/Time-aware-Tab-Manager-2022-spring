@@ -3,7 +3,7 @@
 // found in the LICENSE file.
 'use strict';
 
-const ALARM_INTERVAL = 60 * 1000; // Threshold for update groups (milliseconds)
+const ALARM_INTERVAL = 2 * 1000; // Threshold for update groups (milliseconds)
 const THRESHOLD = [0.2, 1]; // Threshold for first and second stage (minute)
 const SKIP_THRESHOLD = 2000; // Threshold for removing current visiting tab from target (milliseconds)
 
@@ -117,12 +117,11 @@ chrome.tabs.onRemoved.addListener(
 );
 
 // Check the tabs periodically 
-setInterval(async () => {
+setInterval(() => {
     let [t] = getTabFromList(currentActiveTab[0], currentActiveTab[1]);
     if (t !== undefined)
         t.setLastActivatedTime();
     regroup();
-
 }, ALARM_INTERVAL);
 
 
@@ -220,21 +219,38 @@ async function groupTabs(tab_info_list, elapsed_time) {
         prom_list.push(chrome.tabs.get(tab_info.getTabId()));
     }
     Promise.all(prom_list).then((tab_list) => {
-        var all_list = groupAdjacentTIDs(tab_list);
+        tab_list.sort(function(a, b) {
+            return a.windowId - b.windowId;
+        });
+        tab_list.push(new TabInfo(0, 0));
+        var tmp_list = [];
+        for (let i = 0; i < tab_list.length; i++) {
+            if (i == 0)
+                tmp_list.push(tab_list[i]);
+            else {
+                if (tab_list[i].windowId != tab_list[i-1].windowId) {
+                    var all_list = groupAdjacentTIDs(tmp_list);
+                    var winid = tmp_list[0].windowId;
 
-        if (all_list.length == 0) return;
-
-        for (const tid_list of all_list) {
-            group(tid_list, elapsed_time);
+                    if (all_list.length == 0) return;
+            
+                    for (const tid_list of all_list) {
+                        group(tid_list, elapsed_time, winid);
+                    }
+                    tmp_list = [];
+                }
+                tmp_list.push(tab_list[i]);
+            }
         }
     });
 }
 
 // Wrapper of chrome.tabs.group
-async function group(tid_list, elapsed_time) {
-    chrome.tabs.group({ tabIds: tid_list }).catch((e) => setTimeout(() => group(tid_list, elapsed_time), TIMEOUT)).then((gid) => {
+async function group(tid_list, elapsed_time, winid) {
+    chrome.tabs.group({ createProperties: { windowId: winid }, tabIds: tid_list }).catch((e) => setTimeout(() => group(tid_list, elapsed_time), TIMEOUT)).then((gid) => {
         if (gid === undefined)
             return;
+        console.log(gid);
         var _color, _time_info;
 
         if (elapsed_time >= THRESHOLD[1]) {
