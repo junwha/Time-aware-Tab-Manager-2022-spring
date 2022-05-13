@@ -3,12 +3,12 @@
 // found in the LICENSE file.
 'use strict';
 
-const ALARM_INTERVAL = 60 * 1000;
-const THRESHOLD = [3, 10];
+const ALARM_INTERVAL = 60 * 1000; 
+const THRESHOLD = [1, 2];
 const TIMEOUT = 100;
 
 function getUnixTime() {
-    return Math.floor(new Date().getTime() / 1000);
+    return Math.floor(new Date().getTime() / (60 * 1000));
 }
 class TabInfo {
     constructor(tabid, windowid) {
@@ -51,10 +51,10 @@ function getTabGroupByTime() {
         else
             secondStage.push(tab);
     }
-    console.log("first");
-    console.log(firstStage);
-    console.log("second");
-    console.log(secondStage);
+    //console.log("first");
+    //console.log(firstStage);
+    //console.log("second");
+    //console.log(secondStage);
     return [firstStage, secondStage];
 }
 
@@ -109,10 +109,10 @@ chrome.runtime.onUpdateAvailable.addListener(() => {
 //add tab into 
 chrome.tabs.onCreated.addListener(
     async (tab) => {
-        console.log(`tab created ${tab.id} ${tab.windowId}`);
+        //console.log(`tab created ${tab.id} ${tab.windowId}`);
         var current_date = new Date();
-        console.log('created time');
-        console.log(current_date);
+        //console.log('created time');
+        //console.log(current_date);
         var tabInfo = new TabInfo(tab.id, tab.windowId);
         tabInfoList.push(tabInfo);
     }
@@ -121,10 +121,10 @@ chrome.tabs.onCreated.addListener(
 //delete tab from list
 chrome.tabs.onRemoved.addListener(
     async (tabid, info) => {
-        console.log(`tab deleted ${tabid} ${info.windowId}`);
+        //console.log(`tab deleted ${tabid} ${info.windowId}`);
         var current_date = new Date();
-        console.log('deleted time');
-        console.log(current_date);
+        //console.log('deleted time');
+        //console.log(current_date);
         tabInfoList = removeTabFromList(tabid, info.windowId);
     }
 );
@@ -132,7 +132,7 @@ chrome.tabs.onRemoved.addListener(
 setInterval(async () => {
     let [firstStage, secondStage] = getTabGroupByTime();
 
-    await ungroupTabs();
+    ungroupTabs();
     groupTabs(firstStage, THRESHOLD[0]);
     groupTabs(secondStage, THRESHOLD[1]);
 
@@ -147,7 +147,7 @@ async function ungroupTabs() {
         tabIdList.push(t.getTabId());
     }
 
-    await ungroup(tabIdList);    
+    ungroup(tabIdList);    
 }
 
 async function ungroup(tabIdList) {
@@ -212,10 +212,10 @@ async function group(tid_list, elapsed_time) {
         var _color, _time_info;
 
         if (elapsed_time >= THRESHOLD[1]) {
-            _time_info = "40s ago";
+            _time_info = `${THRESHOLD[1]}m`;
             _color = "red";
         } else if (elapsed_time >= THRESHOLD[0]) {
-            _time_info = "20s ago";
+            _time_info = `${THRESHOLD[0]}m`;
             _color = "yellow";
         } else {
             return;
