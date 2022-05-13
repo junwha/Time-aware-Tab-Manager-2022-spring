@@ -4,7 +4,7 @@
 'use strict';
 
 const ALARM_INTERVAL = 5 * 1000;
-const THRESHOLD = [20, 40];
+const THRESHOLD = [10, 20];
 
 function getUnixTime() {
     return Math.floor(new Date().getTime() / 1000);
@@ -88,11 +88,16 @@ chrome.runtime.onStartup.addListener(
 );
 
 chrome.tabs.onActivated.addListener(
-    (tab) => {
+    async (tab) => {
         let [t] = getTabFromList(currentActiveTab[0], currentActiveTab[1]);
         currentActiveTab = [tab.tabId, tab.windowId];
         if (t !== undefined)
             t.setLastDeactivatedTime();
+        
+        let [firstStage, secondStage] = getTabGroupByTime();
+        ungroupTabs();
+        groupTabs(firstStage, THRESHOLD[0]);
+        groupTabs(secondStage, THRESHOLD[1]);
     }
 );
 
@@ -119,13 +124,26 @@ chrome.tabs.onRemoved.addListener(
     }
 );
 
-setInterval(() => {
+setInterval(async () => {
     let [firstStage, secondStage] = getTabGroupByTime();
 
+    ungroupTabs();
     groupTabs(firstStage, THRESHOLD[0]);
     groupTabs(secondStage, THRESHOLD[1]);
 
 }, ALARM_INTERVAL);
+
+async function ungroupTabs() {
+    if (tabInfoList.length == 0)
+        return;
+    var tabIdList = [];
+
+    for (const t of tabInfoList) {
+        tabIdList.push(t.getTabId());
+    }
+
+    await chrome.tabs.ungroup(tabIdList);
+}
 
 
 function groupAdjacentTIDs(tab_list) {
@@ -157,6 +175,8 @@ function groupAdjacentTIDs(tab_list) {
 
 
 async function groupTabs(tab_info_list, elapsed_time) {
+    if (tab_info_list.length == 0)
+        return;
     var tab_list = [];
 
     for (const tab_info of tab_info_list) {
@@ -174,10 +194,10 @@ async function groupTabs(tab_info_list, elapsed_time) {
                 (gid) => {
                     var _color, _time_info;
 
-                    if (elapsed_time >= 40) {
+                    if (elapsed_time >= THRESHOLD[1]) {
                         _time_info = "40s ago";
                         _color = "red";
-                    } else if (elapsed_time >= 20) {
+                    } else if (elapsed_time >= THRESHOLD[0]) {
                         _time_info = "20s ago";
                         _color = "yellow";
                     } else {
