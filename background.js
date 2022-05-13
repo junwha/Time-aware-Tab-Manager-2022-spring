@@ -3,7 +3,7 @@
 // found in the LICENSE file.
 'use strict';
 
-const ALARM_INTERVAL = 5 * 1000; // Threshold for update groups (milliseconds)
+const ALARM_INTERVAL = 2 * 1000; // Threshold for update groups (milliseconds)
 let THRESHOLD = [1, 2]; // Threshold for first and second stage (minute)
 const SKIP_THRESHOLD = 2000; // Threshold for removing current visiting tab from target (milliseconds)
 
