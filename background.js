@@ -117,7 +117,17 @@ chrome.tabs.onRemoved.addListener(
     }
 );
 
-/// Return two tab lists satisfying thresholds
+// Check the tabs periodically 
+setInterval(async () => {
+    let [firstStage, secondStage] = getTabListsByTime();
+    regroup(firstStage, secondStage);
+
+}, ALARM_INTERVAL);
+
+
+/// Main Logic
+
+// Return two tab lists satisfying thresholds
 function getTabListsByTime() {
     let firstStage = [];
     let secondStage = [];
@@ -136,21 +146,18 @@ function getTabListsByTime() {
     return [firstStage, secondStage];
 }
 
-setInterval(async () => {
-    let [firstStage, secondStage] = getTabListsByTime();
-    regroup(firstStage, secondStage);
-
-}, ALARM_INTERVAL);
-
+// Regroup all collected tabs
 function regroup(firstStage, secondStage) {
-    ungroupTabs();
+    ungroupAll();
     groupTabs(firstStage, THRESHOLD[0]);
     groupTabs(secondStage, THRESHOLD[1]);
 }
 
-async function ungroupTabs() {
+// Ungroup all tabs in current state
+async function ungroupAll() {
     if (tabInfoList.length == 0)
         return;
+
     var tabIdList = [];
 
     for (const t of tabInfoList) {
@@ -160,6 +167,7 @@ async function ungroupTabs() {
     ungroup(tabIdList);
 }
 
+// Wrapper of chrome.tabs.ungroup
 async function ungroup(tabIdList) {
     chrome.tabs.ungroup(tabIdList).catch((e) => {
         setTimeout(
@@ -169,6 +177,8 @@ async function ungroup(tabIdList) {
     });
 }
 
+// This function returns two-dimension array,
+// each array is the tabs which are adjacent
 function groupAdjacentTIDs(tab_list) {
     if (tab_list.length == 0) return [];
 
@@ -196,7 +206,7 @@ function groupAdjacentTIDs(tab_list) {
     return all_list;
 }
 
-
+// Group all tabs
 async function groupTabs(tab_info_list, elapsed_time) {
     if (tab_info_list.length == 0)
         return;
@@ -216,6 +226,7 @@ async function groupTabs(tab_info_list, elapsed_time) {
     });
 }
 
+// Wrapper of chrome.tabs.group
 async function group(tid_list, elapsed_time) {
     chrome.tabs.group({ tabIds: tid_list }).catch((e) => setTimeout(() => group(tid_list, elapsed_time), TIMEOUT)).then((gid) => {
         if (gid === undefined)
