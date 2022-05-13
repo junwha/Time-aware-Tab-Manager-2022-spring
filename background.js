@@ -14,6 +14,31 @@ const MIN_TO_MS = (60 * 1000);
 let currentActiveTab = [0, 0];
 let tabInfoList = [];
 
+chrome.runtime.onMessage.addListener(
+    function (request, sender, sendResponse) {
+        if (request.type == 0) { // Close tabs
+            console.log("close!!!");
+        } else if (request.type == 1) { // Update thresholds
+            THRESHOLD[0] = request.level[0];
+            THRESHOLD[1] = request.level[1];
+            console.log("threshold complete!!!");
+        } else if (request.type == 2) {
+            let [firstStage, secondStage] = getTabListsByTime();
+            chrome.runtime.sendResponse({
+                tab_info: {
+                    first: firstStage,
+                    second: secondStage
+                }
+            });
+            console.log("send stages!!!");
+        } else {
+            sendResponse({ status: 0 }); // failed
+        }
+        sendResponse({ status: 1 }); // succeed
+    }
+);
+
+
 /// Class for storing information of tabs.
 // It maintains time information and window information
 // You can get the tab by using chrome.tabs.get(tabInfo.getTabId());
@@ -219,7 +244,7 @@ async function groupTabs(tab_info_list, elapsed_time) {
         prom_list.push(chrome.tabs.get(tab_info.getTabId()));
     }
     Promise.all(prom_list).then((tab_list) => {
-        tab_list.sort(function(a, b) {
+        tab_list.sort(function (a, b) {
             return a.windowId - b.windowId;
         });
         tab_list.push(new TabInfo(0, 0));
@@ -228,12 +253,12 @@ async function groupTabs(tab_info_list, elapsed_time) {
             if (i == 0)
                 tmp_list.push(tab_list[i]);
             else {
-                if (tab_list[i].windowId != tab_list[i-1].windowId) {
+                if (tab_list[i].windowId != tab_list[i - 1].windowId) {
                     var all_list = groupAdjacentTIDs(tmp_list);
                     var winid = tmp_list[0].windowId;
 
                     if (all_list.length == 0) return;
-            
+
                     for (const tid_list of all_list) {
                         group(tid_list, elapsed_time, winid);
                     }
