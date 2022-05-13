@@ -1,6 +1,5 @@
 {
-  "name": "Time aware Tab Manager",
-  "description": "Demonstrates usage and features of the event page by reminding user to drink water",
+  "name": "TTM",
   "version": "1.0",
   "manifest_version": 3,
   "permissions": [
