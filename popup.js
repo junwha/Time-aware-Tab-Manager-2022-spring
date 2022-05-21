@@ -11,15 +11,19 @@ const favicon_size = 35;
 
 console.log("window onload");
 
-chrome.runtime.sendMessage({ type: "2" }, function (response) {
+drawFavIcons();
 
-    // console.log(response["tab_info"]["first"]);
-    // console.log(response["tab_info"]["second"]);
-    if (response.status == 1) {
-        drawFavicon(Array.from(response["tab_info"]["first"]), 0);
-        drawFavicon(Array.from(response["tab_info"]["second"]), 1);
-    }
-});
+function drawFavIcons() {
+    chrome.runtime.sendMessage({ type: "2" }, function (response) {
+
+        // console.log(response["tab_info"]["first"]);
+        // console.log(response["tab_info"]["second"]);
+        if (response.status == 1) {
+            drawFavicon(Array.from(response["tab_info"]["first"]), 0);
+            drawFavicon(Array.from(response["tab_info"]["second"]), 1);
+        }
+    });
+}
 
 ctx.font = 'bold 24px comicsans';
 ctx.fillText('Tab Manager', 30, 50);
@@ -58,12 +62,14 @@ closeButton2.onclick = function () {
     chrome.runtime.sendMessage({ type: 0, level: 1 }, function (response) {
         console.log(response);
     });
+    drawFavIcons();
     console.log("Close T2 Clicked");
 }
 closeButton1.onclick = function () {
     chrome.runtime.sendMessage({ type: 0, level: 0 }, function (response) {
         console.log(response);
     });
+    drawFavIcons();
     console.log("Close T1 Clicked");
 }
 

@@ -63,7 +63,12 @@ async function send_fav_icons(sendResponse) {
     for (var i = 0; i < 2; i++) {
         var tab_list = await Promise.all(prom_lists[i]);
         for (var tab of tab_list) {
-            two_level_fav_icons[i].push(tab.favIconUrl);
+            console.log(tab.favIconUrl);
+            if (tab.favIconUrl != "") {
+                two_level_fav_icons[i].push(tab.favIconUrl);
+            } else {
+                two_level_fav_icons[i].push("https://upload.wikimedia.org/wikipedia/commons/thumb/e/e1/Google_Chrome_icon_%28February_2022%29.svg/1920px-Google_Chrome_icon_%28February_2022%29.svg.png");
+            }
         }
     }
     console.log("Send response!");
