@@ -41,10 +41,11 @@ chrome.runtime.onMessage.addListener(
                     second: secondStage
                 }
             });
+            return;
         } else {
-            // sendResponse({ status: 0 }); // failed
+            sendResponse({ status: 0 }); // failed
         }
-        // sendResponse({ status: 1 }); // succeed
+        sendResponse({ status: 1 }); // succeed
     }
 );
 
