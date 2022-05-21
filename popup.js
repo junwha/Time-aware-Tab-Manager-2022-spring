@@ -53,13 +53,13 @@ chrome.storage.sync.get(["threshold1", "threshold2"], function (items) {
 
 closeButton2.onclick = function () {
     chrome.runtime.sendMessage({ type: 0, level: 1 }, function (response) {
-        console.log(response.resp);
+        console.log(response);
     });
     console.log("Close T2 Clicked");
 }
 closeButton1.onclick = function () {
     chrome.runtime.sendMessage({ type: 0, level: 0 }, function (response) {
-        console.log(response.resp);
+        console.log(response);
     });
     console.log("Close T1 Clicked");
 }
@@ -68,7 +68,7 @@ thresholdBar1.oninput = function () {
     thresholdValue1.innerHTML = thresholdBar1.value;
     chrome.storage.sync.set({ "threshold1": thresholdBar1.value });
     chrome.runtime.sendMessage({ type: 1, thresholds: [thresholdBar1.value, thresholdBar2.value] }, function (response) {
-        console.log(response.resp);
+        console.log(response);
     });
     console.log(this.value);
 }
@@ -76,7 +76,7 @@ thresholdBar2.oninput = function () {
     thresholdValue2.innerHTML = thresholdBar2.value;
     chrome.storage.sync.set({ "threshold2": thresholdBar2.value });
     chrome.runtime.sendMessage({ type: 1, thresholds: [thresholdBar1.value, thresholdBar2.value] }, function (response) {
-        console.log(response.resp);
+        console.log(response);
     });
     console.log(this.value);
 }
