@@ -6,93 +6,133 @@ var rect_y = 103
 var text_x = 68
 var text_y = 93
 
-ctx.font = 'bold 24px comicsans'
-ctx.fillText('Tab Manager',30, 50);
+const margin_between = 260;
+const favicon_size = 35;
 
-ctx.font = 'bold 18px comicsans'
-ctx.textAlign = 'left'
+console.log("window onload");
+chrome.runtime.sendMessage({ type: "2" }, function (response) {
+    console.log(response);
+    // console.log(response["tab_info"]["first"]);
+    // console.log(response["tab_info"]["second"]);
+    // drawFavicon(response["tab_info"]["first"], 0);
+    // drawFavicon(response["tab_info"]["second"], 1);
+});
+
+ctx.font = 'bold 24px comicsans';
+ctx.fillText('Tab Manager', 30, 50);
+
+ctx.font = 'bold 18px comicsans';
+ctx.textAlign = 'left';
 ctx.fillText('Threshold 2', text_x, text_y);
-ctx.fillText('Threshold 1', text_x + 260, text_y);
+ctx.fillText('Threshold 1', text_x + margin_between, text_y);
 // ctx.fillText('2 hours', text_x, text_y + 200);
-// ctx.fillText('Excepted', text_x + 260, text_y + 200);
+// ctx.fillText('Excepted', text_x + margin_between, text_y + 200);
 
-for (let i = 0; i < 2; i++){
-    shadowRect(rect_x + 260 * i + 5, rect_y + 5, 215, 155, 10, '#DDDDDD');
-        
+for (let i = 0; i < 2; i++) {
+    shadowRect(rect_x + margin_between * i + 5, rect_y + 5, 215, 155, 10, '#DDDDDD');
+
     ctx.fillStyle = '#EEEEEE';
     ctx.strokeStyle = "#CCCCCC"
-    roundRect(ctx, rect_x + 260 * i, rect_y, 220, 160, 10, true, true);
+    roundRect(ctx, rect_x + margin_between * i, rect_y, 220, 160, 10, true, true);
 }
 
 var thresholdBar1 = document.getElementById("thresholdRange1");
-var thresholdValue1 = document.getElementById("thresholdValue1"); 
+var thresholdValue1 = document.getElementById("thresholdValue1");
 var thresholdBar2 = document.getElementById("thresholdRange2");
 var thresholdValue2 = document.getElementById("thresholdValue2");
 
 var closeButton2 = document.getElementById("closeT2");
 var closeButton1 = document.getElementById("closeT1");
 
-window.onload = function() {
-    chrome.runtime.sendMessage({type:"2"}, function(response) {
-        console.log(response.tabinfo["first"]);
-        console.log(response.tabinfo["second"]);
-    });
-}
-
-chrome.storage.sync.get(["threshold1","threshold2"], function(items){
+chrome.storage.sync.get(["threshold1", "threshold2"], function (items) {
     thresholdBar1.value = items["threshold1"];
     thresholdBar2.value = items["threshold2"];
     thresholdValue1.innerHTML = thresholdBar1.value;
     thresholdValue2.innerHTML = thresholdBar2.value;
 });
 
-closeButton2.onclick = function(){
-    chrome.runtime.sendMessage({type:"0", level:"1"}, function(response) {
+closeButton2.onclick = function () {
+    chrome.runtime.sendMessage({ type: 0, level: 1 }, function (response) {
         console.log(response.resp);
     });
     console.log("Close T2 Clicked");
 }
-closeButton1.onclick = function(){
-    chrome.runtime.sendMessage({type:"0", level:"0"}, function(response) {
+closeButton1.onclick = function () {
+    chrome.runtime.sendMessage({ type: 0, level: 0 }, function (response) {
         console.log(response.resp);
     });
     console.log("Close T1 Clicked");
 }
 
-thresholdBar1.oninput = function(){
+thresholdBar1.oninput = function () {
     thresholdValue1.innerHTML = thresholdBar1.value;
-    chrome.storage.sync.set({"threshold1": thresholdBar1.value});
-    chrome.runtime.sendMessage({type:"1", thresholds:[thresholdBar1.value, thresholdBar2.value]}, function(response) {
+    chrome.storage.sync.set({ "threshold1": thresholdBar1.value });
+    chrome.runtime.sendMessage({ type: 1, thresholds: [thresholdBar1.value, thresholdBar2.value] }, function (response) {
         console.log(response.resp);
     });
     console.log(this.value);
 }
-thresholdBar2.oninput = function(){
+thresholdBar2.oninput = function () {
     thresholdValue2.innerHTML = thresholdBar2.value;
-    chrome.storage.sync.set({"threshold2": thresholdBar2.value});
-    chrome.runtime.sendMessage({type:"1", thresholds:[thresholdBar1.value, thresholdBar2.value]}, function(response) {
+    chrome.storage.sync.set({ "threshold2": thresholdBar2.value });
+    chrome.runtime.sendMessage({ type: 1, thresholds: [thresholdBar1.value, thresholdBar2.value] }, function (response) {
         console.log(response.resp);
     });
     console.log(this.value);
 }
 
-var fav = new Image();
-fav.src = "https://stackoverflow.com/favicon.ico";
-fav.onload = function(){
-    ctx.drawImage(fav,100,100,100,100);
+// var fav = new Image();
+// fav.src = "https://stackoverflow.com/favicon.ico";
+// fav.onload = function () {
+//     ctx.drawImage(fav, 100, 100, 100, 100);
+// }
+// getFaviconFromUrl("https://stackoverflow.com/favicon.ico", [rect_x + 10, rect_y + 10]);
+// getFaviconFromUrl("https://stackoverflow.com/favicon.ico", [rect_x + (favicon_size + 10) + 10, rect_y + 10]);
+// getFaviconFromUrl("https://stackoverflow.com/favicon.ico", [rect_x + (favicon_size + 10) * 2 + 10, rect_y + 10]);
+
+// getFaviconFromUrl("https://stackoverflow.com/favicon.ico", [rect_x + 10, rect_y + 10 + ((favicon_size) + 10)]);
+// getFaviconFromUrl("https://stackoverflow.com/favicon.ico", [rect_x + (favicon_size + 10) + 10, rect_y + 10 + ((favicon_size) + 10)]);
+// getFaviconFromUrl("https://stackoverflow.com/favicon.ico", [rect_x + (favicon_size + 10) * 2 + 10, rect_y + 10 + ((favicon_size) + 10)]);
+
+// getFaviconFromUrl("https://stackoverflow.com/favicon.ico", [rect_x + 10, rect_y + 10 + ((favicon_size) + 10) * 2]);
+// getFaviconFromUrl("https://stackoverflow.com/favicon.ico", [rect_x + (favicon_size + 10) + 10, rect_y + 10 + ((favicon_size) + 10) * 2]);
+// getFaviconFromUrl("https://stackoverflow.com/favicon.ico", [rect_x + (favicon_size + 10) * 2 + 10, rect_y + 10 + ((favicon_size) + 10) * 2]);
+
+
+// getFaviconFromUrl("https://stackoverflow.com/favicon.ico", [rect_x + margin_between + 10, rect_y + 10]);
+
+function drawFavicon(info_list, level) {
+    info_list.sort(function (a, b) {
+        return a.index - b.index;
+    });
+
+    for (i = 0; i < 3; i++) {
+        for (j = 0; j < 3; j++) {
+            getFaviconFromUrl(info_list[i * 3 + j].favicon_url, [rect_x + margin_between * (1 - level) + (favicon_size + 10) * j + 10, rect_y + 10 + ((favicon_size) + 10) * i]);
+        }
+    }
 }
 
-function shadowRect(x,y,w,h,repeats,color){
-    ctx.strokeStyle=color;
-    ctx.shadowColor=color;
-    ctx.shadowBlur=5;
-    for(var i=0;i<repeats;i++){
-        ctx.shadowBlur+=0.25;
-        ctx.strokeRect(x,y,w,h);
+function getFaviconFromUrl(url_body, position) {
+    // const url_head = "https://s2.googleusercontent.com/s2/favicons?domain=";
+    var fav = new Image();
+    fav.src = url_body;
+    fav.onload = function () {
+        ctx.drawImage(fav, position[0], position[1], favicon_size, favicon_size);
     }
-    ctx.shadowColor='rgba(0,0,0,0)';
-    ctx.lineWidth=1;
-    ctx.strokeRect(x+2,y+2,w-4,h-4);
+    return fav;
+}
+function shadowRect(x, y, w, h, repeats, color) {
+    ctx.strokeStyle = color;
+    ctx.shadowColor = color;
+    ctx.shadowBlur = 5;
+    for (var i = 0; i < repeats; i++) {
+        ctx.shadowBlur += 0.25;
+        ctx.strokeRect(x, y, w, h);
+    }
+    ctx.shadowColor = 'rgba(0,0,0,0)';
+    ctx.lineWidth = 1;
+    ctx.strokeRect(x + 2, y + 2, w - 4, h - 4);
 
 }
 
@@ -104,9 +144,9 @@ function roundRect(ctx, x, y, width, height, radius, fill, stroke) {
         radius = 5;
     }
     if (typeof radius === 'number') {
-        radius = {tl: radius, tr: radius, br: radius, bl: radius};
+        radius = { tl: radius, tr: radius, br: radius, bl: radius };
     } else {
-        var defaultRadius = {tl: 0, tr: 0, br: 0, bl: 0};
+        var defaultRadius = { tl: 0, tr: 0, br: 0, bl: 0 };
         for (var side in defaultRadius) {
             radius[side] = radius[side] || defaultRadius[side];
         }
@@ -130,12 +170,12 @@ function roundRect(ctx, x, y, width, height, radius, fill, stroke) {
     }
 }
 
-function max(a,b) {
-    if(a > b) return a;
+function max(a, b) {
+    if (a > b) return a;
     else return b;
 }
 
-function min(a,b) {
-    if(a > b) return b;
+function min(a, b) {
+    if (a > b) return b;
     else return a;
 }
