@@ -15,8 +15,10 @@ chrome.runtime.sendMessage({ type: "2" }, function (response) {
 
     // console.log(response["tab_info"]["first"]);
     // console.log(response["tab_info"]["second"]);
-    drawFavicon(response["tab_info"]["first"], 0);
-    drawFavicon(response["tab_info"]["second"], 1);
+    if (response.status == 1) {
+        drawFavicon(Array.from(response["tab_info"]["first"]), 0);
+        drawFavicon(Array.from(response["tab_info"]["second"]), 1);
+    }
 });
 
 ctx.font = 'bold 24px comicsans';
@@ -24,8 +26,8 @@ ctx.fillText('Tab Manager', 30, 50);
 
 ctx.font = 'bold 18px comicsans';
 ctx.textAlign = 'left';
-ctx.fillText('Threshold 2', text_x, text_y);
-ctx.fillText('Threshold 1', text_x + margin_between, text_y);
+ctx.fillText('Threshold 1', text_x, text_y);
+ctx.fillText('Threshold 2', text_x + margin_between, text_y);
 // ctx.fillText('2 hours', text_x, text_y + 200);
 // ctx.fillText('Excepted', text_x + margin_between, text_y + 200);
 
@@ -110,7 +112,7 @@ function drawFavicon(info_list, level) {
     for (i = 0; i < 3; i++) {
         for (j = 0; j < 3; j++) {
             if (i * 3 + j >= info_list.length) return;
-            getFaviconFromUrl(info_list[i * 3 + j].tab.favicon_url, [rect_x + margin_between * (1 - level) + (favicon_size + 10) * j + 10, rect_y + 10 + ((favicon_size) + 10) * i]);
+            getFaviconFromUrl(info_list[i * 3 + j], [rect_x + margin_between * (level) + (favicon_size + 10) * j + 10, rect_y + 10 + ((favicon_size) + 10) * i]);
         }
     }
 }

@@ -4,7 +4,7 @@
 'use strict';
 
 const ALARM_INTERVAL = 2 * 1000; // Threshold for update groups (milliseconds)
-const THRESHOLD = [0.2, 1]; // Threshold for first and second stage (minute)
+const THRESHOLD = [0.1, 1]; // Threshold for first and second stage (minute)
 const SKIP_THRESHOLD = 2000; // Threshold for removing current visiting tab from target (milliseconds)
 
 // Constants
@@ -33,23 +33,48 @@ chrome.runtime.onMessage.addListener(
             THRESHOLD[0] = request.thresholds[0];
             THRESHOLD[1] = request.thresholds[1];
         } else if (request.type == 2) {
-            let [firstStage, secondStage] = getTabListsByTime();
-            console.log("Background will send response");
-            console.log(firstStage);
-            sendResponse({
-                tab_info: {
-                    first: firstStage,
-                    second: secondStage
-                }
-            });
-            return;
+            send_fav_icons(sendResponse);
+            return true;
         } else {
+            console.log(request);
             sendResponse({ status: 0 }); // failed
         }
-        sendResponse({ status: 1 }); // succeed
+        if (request.type != 2)
+            sendResponse({ status: 1 }); // succeed
     }
 );
 
+async function send_fav_icons(sendResponse) {
+    let two_level_info = getTabListsByTime();
+    console.log("Background will send response");
+
+    var prom_lists = [[], []];
+    console.log(two_level_info);
+
+    for (var i = 0; i < 2; i++) {
+        for (var j = 0; j < two_level_info[i].length; j++) {
+            if (j > 8) break;
+            prom_lists[i].push(chrome.tabs.get(two_level_info[i][j].getTabId()));
+        }
+    }
+
+    var two_level_fav_icons = [[], []];
+
+    for (var i = 0; i < 2; i++) {
+        var tab_list = await Promise.all(prom_lists[i]);
+        for (var tab of tab_list) {
+            two_level_fav_icons[i].push(tab.favIconUrl);
+        }
+    }
+    console.log("Send response!");
+    sendResponse({
+        status: two_level_fav_icons[0].length > 0 || two_level_fav_icons[1].length > 0,
+        tab_info: {
+            first: two_level_fav_icons[0],
+            second: two_level_fav_icons[1]
+        }
+    });
+}
 
 /// Class for storing information of tabs.
 // It maintains time information and window information
