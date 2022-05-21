@@ -14,6 +14,41 @@ const MIN_TO_MS = (60 * 1000);
 let currentActiveTab;
 let tabInfoList = [];
 
+chrome.runtime.onMessage.addListener(
+    function (request, sender, sendResponse) {
+        if (request.type == 0) { // Close tabs
+            let tab_all_list = getTabListsByTime();
+
+            var tab_id_list = [];
+
+            for (const tab_info of tab_all_list[request.level]) {
+                tab_id_list.push(tab_info.getTabId());
+            }
+
+            remove(tab_id_list);
+
+            console.log("closed");
+        } else if (request.type == 1) { // Update thresholds
+            console.log(request);
+            THRESHOLD[0] = request.thresholds[0];
+            THRESHOLD[1] = request.thresholds[1];
+        } else if (request.type == 2) {
+            let [firstStage, secondStage] = getTabListsByTime();
+            console.log("Background will send response");
+            sendResponse({
+                tab_info: {
+                    first: firstStage,
+                    second: secondStage
+                }
+            });
+        } else {
+            // sendResponse({ status: 0 }); // failed
+        }
+        // sendResponse({ status: 1 }); // succeed
+    }
+);
+
+
 /// Class for storing information of tabs.
 // It maintains time information and window information
 // You can get the tab by using chrome.tabs.get(tabInfo.getTabId());
