@@ -139,9 +139,9 @@ chrome.tabs.onActivated.addListener(
 
         let [t] = getTabFromList(currentActiveTab.tabId, currentActiveTab.windowId);
         // console.log(t);
-        // console.log(tabInfoList);
-        // console.log(currentActiveTab);
-        console.log(t.getActiveTime());
+        // // console.log(tabInfoList);
+        // // console.log(currentActiveTab);
+        // console.log(t.getActiveTime());
         if (t !== undefined)
             if (t.getActiveTime() > SKIP_THRESHOLD)
                 t.setLastDeactivatedTime();
@@ -240,6 +240,16 @@ async function ungroup(tabIdList) {
     });
 }
 
+// Wrapper of chrome.tabs.remove
+function remove(tabIdList) {
+    chrome.tabs.remove(tabIdList).catch((e) => {
+        setTimeout(
+            () => remove(tabIdList),
+            TIMEOUT
+        );
+    });
+}
+
 // This function returns two-dimension array,
 // each array is the tabs which are adjacent
 function groupAdjacentTIDs(tab_list) {
@@ -332,3 +342,7 @@ async function group(tid_list, elapsed_time, window_id) {
         p.catch((e) => console.log("[Exception] no group"));
     })
 }
+
+
+/////
+
