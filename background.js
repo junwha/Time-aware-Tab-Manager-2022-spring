@@ -35,6 +35,7 @@ chrome.runtime.onMessage.addListener(
         } else if (request.type == 2) {
             let [firstStage, secondStage] = getTabListsByTime();
             console.log("Background will send response");
+            console.log(firstStage);
             sendResponse({
                 tab_info: {
                     first: firstStage,

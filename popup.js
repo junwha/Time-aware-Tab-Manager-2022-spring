@@ -10,12 +10,13 @@ const margin_between = 260;
 const favicon_size = 35;
 
 console.log("window onload");
+
 chrome.runtime.sendMessage({ type: "2" }, function (response) {
-    console.log(response);
+
     // console.log(response["tab_info"]["first"]);
     // console.log(response["tab_info"]["second"]);
-    // drawFavicon(response["tab_info"]["first"], 0);
-    // drawFavicon(response["tab_info"]["second"], 1);
+    drawFavicon(response["tab_info"]["first"], 0);
+    drawFavicon(response["tab_info"]["second"], 1);
 });
 
 ctx.font = 'bold 24px comicsans';
@@ -108,7 +109,8 @@ function drawFavicon(info_list, level) {
 
     for (i = 0; i < 3; i++) {
         for (j = 0; j < 3; j++) {
-            getFaviconFromUrl(info_list[i * 3 + j].favicon_url, [rect_x + margin_between * (1 - level) + (favicon_size + 10) * j + 10, rect_y + 10 + ((favicon_size) + 10) * i]);
+            if (i * 3 + j >= info_list.length) return;
+            getFaviconFromUrl(info_list[i * 3 + j].tab.favicon_url, [rect_x + margin_between * (1 - level) + (favicon_size + 10) * j + 10, rect_y + 10 + ((favicon_size) + 10) * i]);
         }
     }
 }
