@@ -144,11 +144,11 @@ function getTabFromList(tab_id, window_id) {
 chrome.runtime.onStartup.addListener(
     async () => {
         chrome.runtime.connect();
-        // chrome.storage.sync.get(["threshold1", "threshold2"], function (items) {
-        //     THRESHOLD[0] = items["threshold1"];
-        //     THRESHOLD[1] = items["threshold2"];
-        // });
-        // console.log("initial thresholds are: " + THRESHOLD[0] + ", " + THRESHOLD[1]);
+        chrome.storage.sync.get(["threshold1", "threshold2"], function (items) {
+            THRESHOLD[0] = items["threshold1"];
+            THRESHOLD[1] = items["threshold2"];
+        });
+        console.log("initial thresholds are: " + THRESHOLD[0] + ", " + THRESHOLD[1]);
         // Check the tabs periodically 
 
     }
