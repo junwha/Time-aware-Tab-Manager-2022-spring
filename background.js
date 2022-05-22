@@ -3,7 +3,7 @@
 // found in the LICENSE file.
 'use strict';
 
-const ALARM_INTERVAL = 2 * 1000; // Threshold for update groups (milliseconds)
+const ALARM_INTERVAL = 60 * 1000; // Threshold for update groups (milliseconds)
 const THRESHOLD = [0.1, 1]; // Threshold for first and second stage (minute)
 const SKIP_THRESHOLD = 2000; // Threshold for removing current visiting tab from target (milliseconds)
 
@@ -69,6 +69,7 @@ async function send_fav_icons(sendResponse) {
             } else {
                 two_level_fav_icons[i].push("https://upload.wikimedia.org/wikipedia/commons/thumb/e/e1/Google_Chrome_icon_%28February_2022%29.svg/1920px-Google_Chrome_icon_%28February_2022%29.svg.png");
             }
+
         }
     }
     console.log("Send response!");
@@ -118,6 +119,9 @@ class TabInfo {
     setLastActivatedTime() {
         this.lastActivatedTime = getUnixTime();
     }
+    setTab(tab) {
+        this.tab = tab;
+    }
 }
 
 
@@ -144,10 +148,10 @@ function getTabFromList(tab_id, window_id) {
 chrome.runtime.onStartup.addListener(
     async () => {
         chrome.runtime.connect();
-        chrome.storage.sync.get(["threshold1", "threshold2"], function (items) {
-            THRESHOLD[0] = items["threshold1"];
-            THRESHOLD[1] = items["threshold2"];
-        });
+        // chrome.storage.sync.get(["threshold1", "threshold2"], function (items) {
+        //     THRESHOLD[0] = items["threshold1"];
+        //     THRESHOLD[1] = items["threshold2"];
+        // });
         console.log("initial thresholds are: " + THRESHOLD[0] + ", " + THRESHOLD[1]);
         // Check the tabs periodically 
 
@@ -161,6 +165,7 @@ setInterval(() => {
         //     t.setLastActivatedTime();
         regroup();
     }
+    console.log(tabInfoList);
 }, ALARM_INTERVAL);
 
 chrome.tabs.onActivated.addListener(
@@ -181,11 +186,14 @@ chrome.tabs.onActivated.addListener(
         currentActiveTab = chrome_tab_info;
 
         let [t2] = getTabFromList(currentActiveTab.tabId, currentActiveTab.windowId);
+
         // console.log(t2);
         // console.log(tabInfoList);
         // console.log(currentActiveTab);
-        if (t2 !== undefined)
+        if (t2 !== undefined) {
             t2.setLastActivatedTime();
+            chrome.tabs.get(t2.getTabId()).then((tab) => { t2.setTab(tab); });
+        }
 
         regroup();
     }
@@ -333,8 +341,8 @@ async function groupTabs(tab_info_list, elapsed_time) {
             if (i == tab_list.length - 1 || tab_list[i].windowId != tab_list[i + 1].windowId) {
                 var all_list = groupAdjacentTIDs(tmp_list);
                 var winid = tmp_list[0].windowId;
-                for (var tabb of tmp_list) {
-                    if (tabb.windowId != winid) console.log("false!!!!!");
+                for (var tab of tmp_list) {
+                    if (tab.windowId != winid) console.log("false!!!!!");
                 }
 
                 if (all_list.length == 0) return;
@@ -376,5 +384,4 @@ async function group(tid_list, elapsed_time, window_id) {
 }
 
 
-/////
 
