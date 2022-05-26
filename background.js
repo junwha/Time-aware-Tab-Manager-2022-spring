@@ -365,10 +365,10 @@ async function group(tid_list, elapsed_time, window_id) {
         // console.log(gid);
         var _color, _time_info;
 
-        if (elapsed_time >= THRESHOLD[1]) {
+        if (parseInt(elapsed_time) >= parseInt(THRESHOLD[1])) {
             _time_info = `${THRESHOLD[1]}m`;
             _color = "red";
-        } else if (elapsed_time >= THRESHOLD[0]) {
+        } else if (parseInt(elapsed_time) >= parseInt(THRESHOLD[0])) {
             _time_info = `${THRESHOLD[0]}m`;
             _color = "yellow";
         } else {
