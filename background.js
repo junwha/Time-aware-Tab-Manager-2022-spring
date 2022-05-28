@@ -32,8 +32,8 @@ chrome.runtime.onMessage.addListener(
             THRESHOLD[0] = request.thresholds[0];
             THRESHOLD[1] = request.thresholds[1];
         } else if (request.type == 2) {
-            regroup();
             send_fav_icons(sendResponse);
+            regroup();
             return true;
         } else {
             console.log(request);
