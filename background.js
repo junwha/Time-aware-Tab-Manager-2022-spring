@@ -3,8 +3,8 @@
 // found in the LICENSE file.
 'use strict';
 
-const DEBUG = true;
-const ALARM_INTERVAL = 60 * 1000; // Threshold for update groups (milliseconds)
+const DEBUG = false;
+const ALARM_INTERVAL = 1; // Threshold for update groups (minute)
 const THRESHOLD = [0.1, 1]; // Threshold for first and second stage (minute)
 const SKIP_THRESHOLD = 2000; // Threshold for removing current visiting tab from target (milliseconds)
 const MAX_TRIAL = 3;
@@ -126,6 +126,26 @@ class TabInfo {
     }
 }
 
+// class TabInfoList { // @Singleton object
+//     constructor() {
+//         chrome.storage.local.set({ "tab_info_list": [] });
+//     }
+//     push(elem) {
+//         chrome.storage.local.get(["tab_info_list"], function (items) {
+//             temp_list = items["tab_info_list"];
+//             temp_list.push(elem);
+//             chrome.storage.local.set({ "tab_info_list": temp_list });
+//         });
+//     }
+
+//     filter() {
+//         chrome.storage.local.get(["tab_info_list"], function (items) {
+//             temp_list = items["tab_info_list"];
+//             temp_list.push(elem);
+//             chrome.storage.sync.set({ "tab_info_list": temp_list });
+//         });
+//     }
+// }
 
 /// Utils
 
@@ -146,9 +166,18 @@ function getTabFromList(tab_id, window_id) {
 }
 
 /// Listeners 
-
+chrome.runtime.onInstalled.addListener((details) => {
+    chrome.alarms.create(
+        "tab_timer",
+        { periodInMinutes: ALARM_INTERVAL },
+    );
+});
 chrome.runtime.onStartup.addListener(
     async () => {
+        chrome.alarms.create(
+            "tab_timer",
+            { periodInMinutes: ALARM_INTERVAL },
+        )
         chrome.runtime.connect();
         // chrome.storage.sync.get(["threshold1", "threshold2"], function (items) {
         //     THRESHOLD[0] = items["threshold1"];
@@ -160,16 +189,16 @@ chrome.runtime.onStartup.addListener(
     }
 );
 
-setInterval(() => {
+chrome.alarms.onAlarm.addListener((alarm) => {
+    console.log("[DEBUG] checking on interval ... ");
     if (currentActiveTab !== undefined) {
-        console.log("[DEBUG] checking on interval ... ")
         // let [t] = getTabFromList(currentActiveTab.tabId, currentActiveTab.windowId);
         // if (t !== undefined)
         //     t.setLastActivatedTime();
         regroup();
     }
     console.log(tabInfoList);
-}, ALARM_INTERVAL);
+});
 
 chrome.tabs.onActivated.addListener(
     async (chrome_tab_info) => {
