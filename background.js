@@ -177,7 +177,6 @@ chrome.tabs.onActivated.addListener(
         }
 
         let [t] = getTabFromList(currentActiveTab.tabId, currentActiveTab.windowId);
-        console.log("[DEBUG] Latest tab is: " + t === undefined ? "undefined" : t.tab.title);
         // console.log(t);
         // // console.log(tabInfoList);
         // // console.log(currentActiveTab);
@@ -189,7 +188,7 @@ chrome.tabs.onActivated.addListener(
         currentActiveTab = chrome_tab_info;
 
         let [t2] = getTabFromList(currentActiveTab.tabId, currentActiveTab.windowId);
-        console.log("[DEBUG] Current tab is: ", t2 === undefined ? "undefined" : t2.tab.title);
+
         // console.log(t2);
         // console.log(tabInfoList);
         // console.log(currentActiveTab);
