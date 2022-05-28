@@ -181,10 +181,14 @@ chrome.tabs.onActivated.addListener(
         // // console.log(tabInfoList);
         // // console.log(currentActiveTab);
         // console.log(t.getActiveTime());
-        if (t !== undefined)
+        if (t !== undefined) {
             if (t.getActiveTime() > SKIP_THRESHOLD)
                 t.setLastDeactivatedTime();
-
+            chrome.tabs.get(t.getTabId()).then((tab) => {
+                console.log("[DEBUG] latest tab: " + tab.title);
+                t.setTab(tab);
+            });
+        }
         currentActiveTab = chrome_tab_info;
 
         let [t2] = getTabFromList(currentActiveTab.tabId, currentActiveTab.windowId);
@@ -194,7 +198,10 @@ chrome.tabs.onActivated.addListener(
         // console.log(currentActiveTab);
         if (t2 !== undefined) {
             t2.setLastActivatedTime();
-            chrome.tabs.get(t2.getTabId()).then((tab) => { t2.setTab(tab); });
+            chrome.tabs.get(t2.getTabId()).then((tab) => {
+                console.log("[DEBUG] current tab: " + tab.title);
+                t2.setTab(tab);
+            });
         }
 
         regroup();
