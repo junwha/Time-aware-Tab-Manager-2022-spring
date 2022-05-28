@@ -87,7 +87,7 @@ async function send_fav_icons(sendResponse) {
 // You can get the tab by using chrome.tabs.get(tabInfo.getTabId());
 class TabInfo {
     constructor(tab) {
-        console("[DEBUG] new tab information is created: " + tab.title);
+        console.log("[DEBUG] new tab information is created: " + tab.title);
         this.tab = tab;
         // this.tab_id = tab_id;
         // this.window_id = window_id;
