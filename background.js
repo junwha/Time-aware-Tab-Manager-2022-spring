@@ -6,7 +6,7 @@
 const ALARM_INTERVAL = 60 * 1000; // Threshold for update groups (milliseconds)
 const THRESHOLD = [0.1, 1]; // Threshold for first and second stage (minute)
 const SKIP_THRESHOLD = 2000; // Threshold for removing current visiting tab from target (milliseconds)
-
+const MAX_TRIAL = 3;
 // Constants
 const TIMEOUT = 100;
 const MIN_TO_MS = (1000);
@@ -267,16 +267,18 @@ async function ungroupAll() {
         tabIdList.push(t.getTabId());
     }
 
-    ungroup(tabIdList);
+    ungroup(tabIdList, 1);
 }
 
 // Wrapper of chrome.tabs.ungroup
-async function ungroup(tabIdList) {
+async function ungroup(tabIdList, trial) {
     chrome.tabs.ungroup(tabIdList).catch((e) => {
-        setTimeout(
-            () => ungroup(tabIdList),
-            TIMEOUT
-        );
+        if (trial <= MAX_TRIAL) {
+            setTimeout(
+                () => ungroup(tabIdList, trial),
+                TIMEOUT
+            );
+        }
     });
 }
 
@@ -348,7 +350,7 @@ async function groupTabs(tab_info_list, elapsed_time) {
                 if (all_list.length == 0) return;
 
                 for (const tid_list of all_list) {
-                    group(tid_list, elapsed_time, winid);
+                    group(tid_list, elapsed_time, winid, 1);
                 }
                 tmp_list = [];
             }
@@ -358,29 +360,31 @@ async function groupTabs(tab_info_list, elapsed_time) {
 }
 
 // Wrapper of chrome.tabs.group
-async function group(tid_list, elapsed_time, window_id) {
-    chrome.tabs.group({ createProperties: { windowId: window_id }, tabIds: tid_list }).catch((e) => setTimeout(() => group(tid_list, elapsed_time, window_id), TIMEOUT)).then((gid) => {
-        if (gid === undefined)
-            return;
-        // console.log(gid);
-        var _color, _time_info;
+async function group(tid_list, elapsed_time, window_id, trial) {
+    if (trial <= MAX_TRIAL) {
+        chrome.tabs.group({ createProperties: { windowId: window_id }, tabIds: tid_list }).catch((e) => setTimeout(() => group(tid_list, elapsed_time, window_id, trial + 1), TIMEOUT)).then((gid) => {
+            if (gid === undefined)
+                return;
+            // console.log(gid);
+            var _color, _time_info;
 
-        if (parseInt(elapsed_time) >= parseInt(THRESHOLD[1])) {
-            _time_info = `${THRESHOLD[1]}m`;
-            _color = "red";
-        } else if (parseInt(elapsed_time) >= parseInt(THRESHOLD[0])) {
-            _time_info = `${THRESHOLD[0]}m`;
-            _color = "yellow";
-        } else {
-            return;
-        }
+            if (parseInt(elapsed_time) >= parseInt(THRESHOLD[1])) {
+                _time_info = `${THRESHOLD[1]}m`;
+                _color = "red";
+            } else if (parseInt(elapsed_time) >= parseInt(THRESHOLD[0])) {
+                _time_info = `${THRESHOLD[0]}m`;
+                _color = "yellow";
+            } else {
+                return;
+            }
 
-        var p = chrome.tabGroups.update(gid, {
-            color: _color,
-            title: _time_info
+            var p = chrome.tabGroups.update(gid, {
+                color: _color,
+                title: _time_info
+            });
+            p.catch((e) => console.log("[Exception] no group"));
         });
-        p.catch((e) => console.log("[Exception] no group"));
-    })
+    }
 }
 
 
