@@ -87,6 +87,7 @@ async function send_fav_icons(sendResponse) {
 // You can get the tab by using chrome.tabs.get(tabInfo.getTabId());
 class TabInfo {
     constructor(tab) {
+        console("[DEBUG] new tab information is created: " + tab.title);
         this.tab = tab;
         // this.tab_id = tab_id;
         // this.window_id = window_id;
@@ -160,6 +161,7 @@ chrome.runtime.onStartup.addListener(
 
 setInterval(() => {
     if (currentActiveTab !== undefined) {
+        console.log("[DEBUG] checking on interval ... ")
         // let [t] = getTabFromList(currentActiveTab.tabId, currentActiveTab.windowId);
         // if (t !== undefined)
         //     t.setLastActivatedTime();
@@ -175,6 +177,7 @@ chrome.tabs.onActivated.addListener(
         }
 
         let [t] = getTabFromList(currentActiveTab.tabId, currentActiveTab.windowId);
+        console.log("[DEBUG] Latest tab is: " + t.tab.title);
         // console.log(t);
         // // console.log(tabInfoList);
         // // console.log(currentActiveTab);
@@ -186,7 +189,7 @@ chrome.tabs.onActivated.addListener(
         currentActiveTab = chrome_tab_info;
 
         let [t2] = getTabFromList(currentActiveTab.tabId, currentActiveTab.windowId);
-
+        console.log("[DEBUG] Current tab is: ", t2.tab.title);
         // console.log(t2);
         // console.log(tabInfoList);
         // console.log(currentActiveTab);
@@ -199,9 +202,9 @@ chrome.tabs.onActivated.addListener(
     }
 );
 
-chrome.runtime.onUpdateAvailable.addListener(async () => {
-    chrome.runtime.reload()
-});
+// chrome.runtime.onUpdateAvailable.addListener(async () => {
+//     chrome.runtime.reload();
+// });
 
 //add tab into 
 chrome.tabs.onCreated.addListener(
