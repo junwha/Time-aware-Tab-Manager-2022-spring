@@ -162,16 +162,10 @@ function getUnixTime() {
 
 function removeTabFromList(tab_id) {
     tabInfoMap.delete(tab_id);
-    // return tabInfoList.filter((t) => {
-    //     return t.getTabId() != tab_id;
-    // });
 }
 
-function getTabFromList(tab_id, window_id) {
+function getTabFromMap(tab_id) {
     return tabInfoMap.get(tab_id);
-    // return tabInfoList.filter((t) => {
-    //     return t.getTabId() == tab_id;
-    // });
 }
 
 /// Listeners 
@@ -216,7 +210,7 @@ chrome.tabs.onActivated.addListener(
             currentActiveTab = chrome_tab_info;
         }
 
-        let t = getTabFromList(currentActiveTab.tabId, currentActiveTab.windowId);
+        let t = getTabFromMap(currentActiveTab.tabId);
         // console.log(t);
         // // console.log(tabInfoList);
         // // console.log(currentActiveTab);
@@ -231,7 +225,7 @@ chrome.tabs.onActivated.addListener(
         }
         currentActiveTab = chrome_tab_info;
 
-        let t2 = getTabFromList(currentActiveTab.tabId, currentActiveTab.windowId);
+        let t2 = getTabFromMap(currentActiveTab.tabId);
 
         // console.log(t2);
         // console.log(tabInfoList);
