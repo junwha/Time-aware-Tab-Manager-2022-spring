@@ -385,14 +385,21 @@ async function ungroupAll() {
 
 // Wrapper of chrome.tabs.ungroup
 async function ungroup(tabIdList, trial) {
-    chrome.tabs.ungroup(tabIdList).catch((e) => {
+    try {
         if (trial <= MAX_TRIAL) {
-            setTimeout(
-                () => ungroup(tabIdList, trial),
-                TIMEOUT
-            );
+            chrome.tabs.ungroup(tabIdList).catch((e) => {
+
+                setTimeout(
+                    () => ungroup(tabIdList, trial),
+                    TIMEOUT
+                );
+
+            });
         }
-    });
+    } catch {
+        console.log("[DEBUG] Promise error on ungroup");
+        return;
+    }
 }
 
 // Wrapper of chrome.tabs.remove
@@ -477,33 +484,37 @@ async function groupTabs(tabInfoList, elapsedTime) {
 
 // Wrapper of chrome.tabs.group
 async function group(tidList, elapsedTime, windowId, trial) {
-    if (trial <= MAX_TRIAL) {
-        chrome.tabs.group({ createProperties: { windowId: windowId }, tabIds: tidList }).catch((e) => setTimeout(() => group(tidList, elapsedTime, windowId, trial + 1), TIMEOUT)).then((gid) => {
-            if (gid === undefined)
-                return;
-            // console.log(gid);
-            var _color, _timeInfo;
+    try {
+        if (trial <= MAX_TRIAL) {
+            chrome.tabs.group({ createProperties: { windowId: windowId }, tabIds: tidList }).catch((e) => setTimeout(() => group(tidList, elapsedTime, windowId, trial + 1), TIMEOUT)).then((gid) => {
+                if (gid === undefined)
+                    return;
+                // console.log(gid);
+                var _color, _timeInfo;
 
-            if (parseInt(elapsedTime) >= parseInt(THRESHOLD[1])) {
-                _timeInfo = `${THRESHOLD[1]}m`;
-                _color = "red";
-            } else if (parseInt(elapsedTime) >= parseInt(THRESHOLD[0])) {
-                _timeInfo = `${THRESHOLD[0]}m`;
-                _color = "yellow";
-            } else {
-                return;
-            }
+                if (parseInt(elapsedTime) >= parseInt(THRESHOLD[1])) {
+                    _timeInfo = `${THRESHOLD[1]}m`;
+                    _color = "red";
+                } else if (parseInt(elapsedTime) >= parseInt(THRESHOLD[0])) {
+                    _timeInfo = `${THRESHOLD[0]}m`;
+                    _color = "yellow";
+                } else {
+                    return;
+                }
 
-            targetGroupIDs.push(gid); // tracking our target groups
+                targetGroupIDs.push(gid); // tracking our target groups
 
-            var p = chrome.tabGroups.update(gid, {
-                color: _color,
-                title: _timeInfo
+                var p = chrome.tabGroups.update(gid, {
+                    color: _color,
+                    title: _timeInfo
+                });
+                p.catch((e) => console.log("[Exception] no group"));
             });
-            p.catch((e) => console.log("[Exception] no group"));
-        });
+        }
+    } catch {
+        console.log("[DEBUG] Promise error on group");
+        return;
     }
 }
-
 
 
