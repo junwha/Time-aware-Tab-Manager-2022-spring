@@ -3,9 +3,9 @@
 // found in the LICENSE file.
 'use strict';
 
-const DEBUG = false;
+const DEBUG = true;
 const ALARM_INTERVAL = 1; // Threshold for update groups (minute)
-const THRESHOLD = [0.1, 1]; // Threshold for first and second stage (minute)
+const THRESHOLD = [5, 60]; // Threshold for first and second stage (minute)
 const SKIP_THRESHOLD = 2000; // Threshold for removing current visiting tab from target (milliseconds)
 const MAX_TRIAL = 3;
 // Constants
@@ -94,6 +94,7 @@ class TabInfo {
         // this.window_id = window_id;
         this.lastDeactivatedTime = getUnixTime();
         this.lastActivatedTime = getUnixTime();
+        this.isWhiteList = false;
     }
 
     // Getters
@@ -112,6 +113,9 @@ class TabInfo {
     getActiveTime() {
         return getUnixTime() - this.lastActivatedTime;
     }
+    getIsWhiteList() {
+        return this.isWhiteList;
+    }
 
     // Setters
     setLastDeactivatedTime() {
@@ -123,6 +127,9 @@ class TabInfo {
     }
     setTab(tab) {
         this.tab = tab;
+    }
+    setWhiteList(flag) {
+        this.isWhiteList = flag;
     }
 }
 
@@ -171,6 +178,7 @@ chrome.runtime.onInstalled.addListener((details) => {
         "tab_timer",
         { periodInMinutes: ALARM_INTERVAL },
     );
+    chrome.storage.sync.set({ "threshold1": 5, "threshold2": 60 });
 });
 chrome.runtime.onStartup.addListener(
     async () => {
@@ -179,10 +187,10 @@ chrome.runtime.onStartup.addListener(
             { periodInMinutes: ALARM_INTERVAL },
         )
         chrome.runtime.connect();
-        // chrome.storage.sync.get(["threshold1", "threshold2"], function (items) {
-        //     THRESHOLD[0] = items["threshold1"];
-        //     THRESHOLD[1] = items["threshold2"];
-        // });
+        chrome.storage.sync.get(["threshold1", "threshold2"], function (items) {
+            THRESHOLD[0] = items["threshold1"];
+            THRESHOLD[1] = items["threshold2"];
+        });
         console.log("initial thresholds are: " + THRESHOLD[0] + ", " + THRESHOLD[1]);
         // Check the tabs periodically 
 
@@ -303,7 +311,9 @@ async function ungroupAll() {
     var tabIdList = [];
 
     for (const t of tabInfoList) {
-        tabIdList.push(t.getTabId());
+
+        if (!t.getIsWhiteList()) // Check if the tab is in white list
+            tabIdList.push(t.getTabId());
     }
 
     ungroup(tabIdList, 1);
