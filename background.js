@@ -118,7 +118,7 @@ class TabInfo {
     getActiveTime() {
         return getUnixTime() - this.lastActivatedTime;
     }
-    getIsWhiteList() {
+    isInWhiteList() {
         return this.isWhiteList;
     }
 
@@ -357,7 +357,7 @@ async function ungroupAll() {
     var tabIdList = [];
 
     for (const t of tabInfoMap.values()) {
-        if (!t.getIsWhiteList()) // Check if the tab is in white list
+        if (!t.isInWhiteList()) // Check if the tab is in white list
             tabIdList.push(t.getTabId());
         else
             console.log("[DEBUG] this tab is in white list: " + t.tab.title);
@@ -425,7 +425,7 @@ async function groupTabs(tabInfoList, elapsedTime) {
         return;
     var promList = [];
 
-    var filteredTabInfoList = tabInfoList.filter(info => !info.getIsWhiteList());
+    var filteredTabInfoList = tabInfoList.filter(info => !info.isInWhiteList());
 
     for (const tabInfo of filteredTabInfoList) {
         promList.push(chrome.tabs.get(tabInfo.getTabId()));
