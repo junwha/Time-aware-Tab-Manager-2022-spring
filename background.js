@@ -291,7 +291,10 @@ chrome.tabGroups.onUpdated.addListener((tabGroup) => {
 }
 );
 
-
+chrome.tabGroups.onMoved.addListener((tabGroup) => {
+    console.log("[DEBUG] tabgroup moved");
+}
+);
 // chrome.runtime.onUpdateAvailable.addListener(async () => {
 //     chrome.runtime.reload();
 // });
@@ -312,6 +315,18 @@ chrome.tabs.onRemoved.addListener(
     }
 );
 
+chrome.tabs.onUpdated.addListener((tabId, changeInfo, tab) => {
+    if (changeInfo["groupId"] == undefined || isTargetGroup(changeInfo["groupId"])) {
+        console.log("[DEBUG] this tab is removed from white list: " + tabId);
+        console.log(tabInfoMap);
+        tabInfoMap.get(tabId).setWhiteList(false);
+    } else {
+        console.log("[DEBUG] this tab is added into white list: " + tabId);
+        console.log(tabInfoMap);
+        tabInfoMap.get(tabId).setWhiteList(true);
+
+    }
+});
 
 
 
