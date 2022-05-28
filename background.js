@@ -14,6 +14,7 @@ const MIN_TO_MS = DEBUG ? 1000 : 60 * 1000;
 
 let currentActiveTab;
 let tabInfoMap = new Map();
+let targetGroupIDs = [];
 
 chrome.runtime.onMessage.addListener(
     function (request, sender, sendResponse) {
@@ -176,6 +177,7 @@ chrome.runtime.onInstalled.addListener((details) => {
     );
     chrome.storage.sync.set({ "threshold1": 5, "threshold2": 60 });
 });
+
 chrome.runtime.onStartup.addListener(
     async () => {
         chrome.alarms.create(
@@ -242,6 +244,49 @@ chrome.tabs.onActivated.addListener(
     }
 );
 
+///
+/// Chrome tab group Listeners
+///
+function isTargetGroup(gid) {
+    return (targetGroupIDs.filter(id => gid == id).length != 0);
+}
+
+function markTabsInGroup(gid, mark) {
+    chrome.tabs.query({ groupId: gid }).then(
+        (tabs) => {
+            for (var tab of tabs) {
+                var tabInfo = tabInfoMap.get(tab.id);
+                tabInfo.setWhiteList(mark);
+                console.log("[DEBUG] this tab is set to or remove from white list: " + tabInfo.tab.title);
+                console.log(mark);
+            }
+        }
+    );
+}
+
+chrome.tabGroups.onCreated.addListener((tabGroup) => {
+    if (!isTargetGroup(tabGroup.id)) {
+        console.log("[DEBUG] this group isn't target group (white list): " + tabGroup.title);
+        markTabsInGroup(tabGroup.id, true);
+    }
+}
+);
+
+chrome.tabGroups.onRemoved.addListener((tabGroup) => {
+    markTabsInGroup(tabGroup.id, false);
+}
+);
+
+chrome.tabGroups.onUpdated.addListener((tabGroup) => {
+    if (!isTargetGroup(tabGroup.id)) {
+        console.log("[DEBUG] this group isn't target group (white list): " + tabGroup.title);
+        markTabsInGroup(tabGroup.id, true);
+    }
+}
+);
+
+
+
 // chrome.runtime.onUpdateAvailable.addListener(async () => {
 //     chrome.runtime.reload();
 // });
@@ -307,10 +352,13 @@ async function ungroupAll() {
     var tabIdList = [];
 
     for (const t of tabInfoMap.values()) {
-
         if (!t.getIsWhiteList()) // Check if the tab is in white list
             tabIdList.push(t.getTabId());
+        else
+            console.log("[DEBUG] this tab is in white list: " + t.tab.title);
     }
+
+    targetGroupIDs = []; // untrack all (we already checked)
 
     ungroup(tabIdList, 1);
 }
@@ -372,9 +420,12 @@ async function groupTabs(tab_info_list, elapsed_time) {
         return;
     var prom_list = [];
 
-    for (const tab_info of tab_info_list) {
+    var filtered_tab_info_list = tab_info_list.filter(info => !info.getIsWhiteList());
+
+    for (const tab_info of filtered_tab_info_list) {
         prom_list.push(chrome.tabs.get(tab_info.getTabId()));
     }
+
     Promise.all(prom_list).then((tab_list) => {
         tab_list.sort(function (a, b) {
             return a.windowId - b.windowId;
@@ -422,6 +473,8 @@ async function group(tid_list, elapsed_time, window_id, trial) {
             } else {
                 return;
             }
+
+            targetGroupIDs.push(gid); // tracking our target groups
 
             var p = chrome.tabGroups.update(gid, {
                 color: _color,
