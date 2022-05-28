@@ -62,15 +62,18 @@ closeButton2.onclick = function () {
     chrome.runtime.sendMessage({ type: 0, level: 1 }, function (response) {
         console.log(response);
     });
-    drawFavIcons();
+
     console.log("Close T2 Clicked");
+    location.reload();
+
 }
 closeButton1.onclick = function () {
     chrome.runtime.sendMessage({ type: 0, level: 0 }, function (response) {
         console.log(response);
     });
-    drawFavIcons();
     console.log("Close T1 Clicked");
+    location.reload();
+
 }
 
 thresholdBar1.oninput = function () {
