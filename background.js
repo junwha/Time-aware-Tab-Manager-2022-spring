@@ -3,13 +3,14 @@
 // found in the LICENSE file.
 'use strict';
 
+const DEBUG = true;
 const ALARM_INTERVAL = 60 * 1000; // Threshold for update groups (milliseconds)
 const THRESHOLD = [0.1, 1]; // Threshold for first and second stage (minute)
 const SKIP_THRESHOLD = 2000; // Threshold for removing current visiting tab from target (milliseconds)
 const MAX_TRIAL = 3;
 // Constants
 const TIMEOUT = 100;
-const MIN_TO_MS = (1000);
+const MIN_TO_MS = DEBUG ? 1000 : 60 * 1000;
 
 let currentActiveTab;
 let tabInfoList = [];
