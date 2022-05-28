@@ -13,7 +13,7 @@ const TIMEOUT = 100;
 const MIN_TO_MS = DEBUG ? 1000 : 60 * 1000;
 
 let currentActiveTab;
-let tabInfoList = [];
+let tabInfoMap = new Map();
 
 chrome.runtime.onMessage.addListener(
     function (request, sender, sendResponse) {
@@ -161,15 +161,17 @@ function getUnixTime() {
 }
 
 function removeTabFromList(tab_id) {
-    return tabInfoList.filter((t) => {
-        return t.getTabId() != tab_id;
-    });
+    tabInfoMap.delete(tab_id);
+    // return tabInfoList.filter((t) => {
+    //     return t.getTabId() != tab_id;
+    // });
 }
 
 function getTabFromList(tab_id, window_id) {
-    return tabInfoList.filter((t) => {
-        return t.getTabId() == tab_id;
-    });
+    return tabInfoMap.get(tab_id);
+    // return tabInfoList.filter((t) => {
+    //     return t.getTabId() == tab_id;
+    // });
 }
 
 /// Listeners 
@@ -205,7 +207,7 @@ chrome.alarms.onAlarm.addListener((alarm) => {
         //     t.setLastActivatedTime();
         regroup();
     }
-    console.log(tabInfoList);
+    console.log(tabInfoMap);
 });
 
 chrome.tabs.onActivated.addListener(
@@ -214,7 +216,7 @@ chrome.tabs.onActivated.addListener(
             currentActiveTab = chrome_tab_info;
         }
 
-        let [t] = getTabFromList(currentActiveTab.tabId, currentActiveTab.windowId);
+        let t = getTabFromList(currentActiveTab.tabId, currentActiveTab.windowId);
         // console.log(t);
         // // console.log(tabInfoList);
         // // console.log(currentActiveTab);
@@ -229,7 +231,7 @@ chrome.tabs.onActivated.addListener(
         }
         currentActiveTab = chrome_tab_info;
 
-        let [t2] = getTabFromList(currentActiveTab.tabId, currentActiveTab.windowId);
+        let t2 = getTabFromList(currentActiveTab.tabId, currentActiveTab.windowId);
 
         // console.log(t2);
         // console.log(tabInfoList);
@@ -254,7 +256,7 @@ chrome.tabs.onActivated.addListener(
 chrome.tabs.onCreated.addListener(
     async (tab) => {
         var tabInfo = new TabInfo(tab);
-        tabInfoList.push(tabInfo);
+        tabInfoMap.set(tabInfo.getTabId(), tabInfo);
     }
 );
 
@@ -262,7 +264,7 @@ chrome.tabs.onCreated.addListener(
 chrome.tabs.onRemoved.addListener(
     async (tab_id, info) => {
         var current_date = new Date();
-        tabInfoList = removeTabFromList(tab_id);
+        removeTabFromList(tab_id);
     }
 );
 
@@ -277,7 +279,7 @@ function getTabListsByTime() {
     let secondStage = [];
 
     // Compare tab's idle time and threshold
-    for (const tab of tabInfoList) {
+    for (const tab of tabInfoMap.values()) {
         if (tab.getTabId() == currentActiveTab.tabId) {
             // console.log(tab.getActiveTime());
         }
@@ -305,12 +307,12 @@ function regroup() {
 
 // Ungroup all tabs in current state
 async function ungroupAll() {
-    if (tabInfoList.length == 0)
+    if (tabInfoMap.size == 0)
         return;
 
     var tabIdList = [];
 
-    for (const t of tabInfoList) {
+    for (const t of tabInfoMap.values()) {
 
         if (!t.getIsWhiteList()) // Check if the tab is in white list
             tabIdList.push(t.getTabId());
