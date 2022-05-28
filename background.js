@@ -9,7 +9,7 @@ const SKIP_THRESHOLD = 2000; // Threshold for removing current visiting tab from
 
 // Constants
 const TIMEOUT = 100;
-const MIN_TO_MS = (60 * 1000);
+const MIN_TO_MS = (1000);
 
 let currentActiveTab;
 let tabInfoList = [];
@@ -26,13 +26,13 @@ chrome.runtime.onMessage.addListener(
             }
 
             remove(tab_id_list);
-
             console.log("closed");
         } else if (request.type == 1) { // Update thresholds
             console.log(request);
             THRESHOLD[0] = request.thresholds[0];
             THRESHOLD[1] = request.thresholds[1];
         } else if (request.type == 2) {
+            regroup();
             send_fav_icons(sendResponse);
             return true;
         } else {
