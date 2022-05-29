@@ -3,7 +3,7 @@
 // found in the LICENSE file.
 'use strict';
 
-const DEBUG = false;
+const DEBUG = true;
 const ALARM_INTERVAL = 1; // Threshold for update groups (minute)
 const THRESHOLD = [5, 60]; // Threshold for first and second stage (minute)
 const SKIP_THRESHOLD = 2000; // Threshold for removing current visiting tab from target (milliseconds)
@@ -183,14 +183,20 @@ function init_extension() {
 
     chrome.tabs.query({}).then((tabs) => {
         for (var tab of tabs) {
-            tabInfoMap[tab.id] = new TabInfo(tab);
+            if (tab.active) currentActiveTab = { "tabId": tab.id, "windowId": tab.windowId };
+            tabInfoMap.set(tab.id, new TabInfo(tab));
         }
+        console.log("[DEBUG] Initial tabs are added into info map");
+        console.log(tabInfoMap);
+
+        ungroupAll();
     });
+
+
 
     chrome.storage.sync.set({ "tab_info_map": tabInfoMap });
 
-    console.log("[DEBUG] Initial tabs are added into info map");
-    console.log(tabInfoMap);
+
 }
 // Listen for installation 
 chrome.runtime.onInstalled.addListener((details) => {
@@ -327,15 +333,18 @@ chrome.tabs.onRemoved.addListener(
 );
 
 chrome.tabs.onUpdated.addListener((tabId, changeInfo, tab) => {
-    if (changeInfo["groupId"] == undefined || isTargetGroup(changeInfo["groupId"])) {
-        console.log("[DEBUG] this tab is removed from white list: " + tabId);
-        console.log(tabInfoMap);
-        tabInfoMap.get(tabId).setWhiteList(false);
-    } else {
-        console.log("[DEBUG] this tab is added into white list: " + tabId);
-        console.log(tabInfoMap);
-        tabInfoMap.get(tabId).setWhiteList(true);
+    if (changeInfo["groupId"] !== undefined) {
+        console.log(changeInfo["groupId"]);
+        if (changeInfo["groupId"] == -1 || isTargetGroup(changeInfo["groupId"])) {
+            console.log("[DEBUG] this tab is removed from white list: " + tabId);
+            console.log(tabInfoMap);
+            tabInfoMap.get(tabId).setWhiteList(false);
+        } else {
+            console.log("[DEBUG] this tab is added into white list: " + tabId);
+            console.log(tabInfoMap);
+            tabInfoMap.get(tabId).setWhiteList(true);
 
+        }
     }
 });
 
@@ -389,8 +398,7 @@ async function ungroupAll() {
             console.log("[DEBUG] this tab is in white list: " + t.tab.title);
     }
 
-    targetGroupIDs = []; // untrack all (we already checked)
-
+    targetGroupIDs = []; // untrack all (we already checked) 
     ungroup(tabIdList, 1);
 }
 
