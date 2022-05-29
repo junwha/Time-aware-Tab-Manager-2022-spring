@@ -3,7 +3,7 @@
 // found in the LICENSE file.
 'use strict';
 
-const DEBUG = true;
+const DEBUG = false;
 const ALARM_INTERVAL = 1; // Threshold for update groups (minute)
 const THRESHOLD = [5, 60]; // Threshold for first and second stage (minute)
 const SKIP_THRESHOLD = 2000; // Threshold for removing current visiting tab from target (milliseconds)
@@ -175,32 +175,44 @@ function getTabFromMap(tab_id) {
 
 /// Listeners 
 
-// Listen for installation 
-chrome.runtime.onInstalled.addListener((details) => {
-    // Initialize periodical timer
+function init_extension() {
     chrome.alarms.create(
         "tab_timer",
         { periodInMinutes: ALARM_INTERVAL },
     );
+
+    chrome.tabs.query({}).then((tabs) => {
+        for (var tab of tabs) {
+            tabInfoMap[tab.id] = new TabInfo(tab);
+        }
+    });
+
+    chrome.storage.sync.set({ "tab_info_map": tabInfoMap });
+
+    console.log("[DEBUG] Initial tabs are added into info map");
+    console.log(tabInfoMap);
+}
+// Listen for installation 
+chrome.runtime.onInstalled.addListener((details) => {
+    // Initialize periodical timer
+    init_extension();
     chrome.storage.sync.set({ "threshold1": THRESHOLD[0], "threshold2": THRESHOLD[1] }); // Initial thresholds
+
 });
 
 // When chrome is newly loaded
 chrome.runtime.onStartup.addListener(
     async () => {
         // Initialize periodical timer
-        chrome.alarms.create(
-            "tab_timer",
-            { periodInMinutes: ALARM_INTERVAL },
-        )
-
-        chrome.runtime.connect();
+        init_extension();
 
         // Restore thresholds from storage (popup.js has saved the values)
         chrome.storage.sync.get(["threshold1", "threshold2"], function (items) {
             THRESHOLD[0] = items["threshold1"];
             THRESHOLD[1] = items["threshold2"];
         });
+
+        chrome.runtime.connect();
 
         console.log("[DEBUG] initial thresholds are: " + THRESHOLD[0] + ", " + THRESHOLD[1]);
     }
@@ -211,9 +223,8 @@ chrome.alarms.onAlarm.addListener((alarm) => {
     console.log("[DEBUG] checking on interval ... ");
     console.log(tabInfoMap);
 
+    // restore
     if (currentActiveTab !== undefined) regroup(); // if current tab is null, we don't need to regroup yet
-
-
 });
 
 // Update tab groups when active tab is changed
