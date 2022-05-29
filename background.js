@@ -393,6 +393,12 @@ function regroup() {
             if (tabs.length > 0) {
                 console.log("[DEBUG] Undefined behavior => restore logic enabled!!!");
                 restoreTabInfo();
+
+                if (currentActiveTab === undefined) {
+                    for (var tab of tabs) {
+                        if (tab.active) currentActiveTab = { "tabId": tab.id, "windowId": tab.windowId };
+                    }
+                }
                 regroup();
             };
         });
