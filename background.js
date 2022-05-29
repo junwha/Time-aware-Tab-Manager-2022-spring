@@ -118,11 +118,18 @@ class TabInfo {
     getActiveTime() {
         return getUnixTime() - this.lastActivatedTime;
     }
+
     isInWhiteList() {
         return this.isWhiteList;
     }
 
     // Setters
+    setAll(tabInfo) {
+        this.lastDeactivatedTime = tabInfo.lastDeactivatedTime;
+        this.lastActivatedTime = tabInfo.lastActivatedTime;
+        this.isWhiteList = tabInfo.isWhiteList;
+    }
+
     setLastDeactivatedTime() {
         this.lastDeactivatedTime = getUnixTime();
     }
@@ -172,15 +179,24 @@ function removeTabFromList(tab_id) {
 function getTabFromMap(tab_id) {
     return tabInfoMap.get(tab_id);
 }
-
+// https://stackoverflow.com/questions/31605172/how-can-i-store-a-map-object-in-a-chrome-app
 function backupTabInfo() {
-    chrome.storage.local.set({ "tab_info_map": tabInfoMap });
+    chrome.storage.local.set({ "tab_info_map": Object.fromEntries(tabInfoMap) });
 }
 
 function restoreTabInfo(callback) {
     chrome.storage.local.get(["tab_info_map"], (items) => {
-        console.log(items);
-        tabInfoMap = items["tab_info_map"]
+        console.log("[DEBUG] Restore tab info from local storage");
+        var restoredEntries = Object.entries(items["tab_info_map"]);
+
+        for (var entry of restoredEntries) {
+            entry[0] = parseInt(entry[0]);
+            var tabInfo = new TabInfo(entry[1]["tab"]);
+            tabInfo.setAll(entry[1]);
+            entry[1] = tabInfo;
+        }
+
+        tabInfoMap = new Map(restoredEntries);
         callback();
     })
 }
@@ -410,6 +426,7 @@ function regroup() {
         groupTabs(firstStage, THRESHOLD[0]);
         groupTabs(secondStage, THRESHOLD[1]);
         backupTabInfo();
+        // restoreTabInfo(() => {}); for test
     }
 }
 
