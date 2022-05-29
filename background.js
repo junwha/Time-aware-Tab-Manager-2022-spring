@@ -173,6 +173,17 @@ function getTabFromMap(tab_id) {
     return tabInfoMap.get(tab_id);
 }
 
+function backupTabInfo() {
+    chrome.storage.local.set({ "tab_info_map": tabInfoMap });
+}
+
+function restoreTabInfo(callback) {
+    chrome.storage.local.get(["tab_info_map"], (items) => {
+        tabInfoMap = items["tab_info_map"]
+        callback();
+    })
+}
+
 /// Listeners 
 
 function init_extension() {
@@ -189,10 +200,9 @@ function init_extension() {
         console.log("[DEBUG] Initial tabs are added into info map");
         console.log(tabInfoMap);
 
+        backupTabInfo();
         ungroupAll();
     });
-
-
 
     chrome.storage.sync.set({ "tab_info_map": tabInfoMap });
 
@@ -378,10 +388,21 @@ function getTabListsByTime() {
 
 // Regroup all collected tabs
 function regroup() {
-    let [firstStage, secondStage] = getTabListsByTime();
-    ungroupAll();
-    groupTabs(firstStage, THRESHOLD[0]);
-    groupTabs(secondStage, THRESHOLD[1]);
+    if (tabInfoMap.size == 0) {
+        chrome.tabs.query({}).then((tabs) => {
+            if (tabs.length > 0) {
+                console.log("[DEBUG] Undefined behavior => restore logic enabled!!!");
+                restoreTabInfo();
+                regroup();
+            };
+        });
+
+    } else {
+        let [firstStage, secondStage] = getTabListsByTime();
+        ungroupAll();
+        groupTabs(firstStage, THRESHOLD[0]);
+        groupTabs(secondStage, THRESHOLD[1]);
+    }
 }
 
 // Ungroup all tabs in current state
