@@ -179,6 +179,7 @@ function backupTabInfo() {
 
 function restoreTabInfo(callback) {
     chrome.storage.local.get(["tab_info_map"], (items) => {
+        console.log(items);
         tabInfoMap = items["tab_info_map"]
         callback();
     })
@@ -408,6 +409,7 @@ function regroup() {
         ungroupAll();
         groupTabs(firstStage, THRESHOLD[0]);
         groupTabs(secondStage, THRESHOLD[1]);
+        backupTabInfo();
     }
 }
 
