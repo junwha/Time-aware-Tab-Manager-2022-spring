@@ -118,11 +118,18 @@ class TabInfo {
     getActiveTime() {
         return getUnixTime() - this.lastActivatedTime;
     }
+
     isInWhiteList() {
         return this.isWhiteList;
     }
 
     // Setters
+    setAll(tabInfo) {
+        this.lastDeactivatedTime = tabInfo.lastDeactivatedTime;
+        this.lastActivatedTime = tabInfo.lastActivatedTime;
+        this.isWhiteList = tabInfo.isWhiteList;
+    }
+
     setLastDeactivatedTime() {
         this.lastDeactivatedTime = getUnixTime();
     }
@@ -172,6 +179,27 @@ function removeTabFromList(tab_id) {
 function getTabFromMap(tab_id) {
     return tabInfoMap.get(tab_id);
 }
+// https://stackoverflow.com/questions/31605172/how-can-i-store-a-map-object-in-a-chrome-app
+function backupTabInfo() {
+    chrome.storage.local.set({ "tab_info_map": Object.fromEntries(tabInfoMap) });
+}
+
+function restoreTabInfo(callback) {
+    chrome.storage.local.get(["tab_info_map"], (items) => {
+        console.log("[DEBUG] Restore tab info from local storage");
+        var restoredEntries = Object.entries(items["tab_info_map"]);
+
+        for (var entry of restoredEntries) {
+            entry[0] = parseInt(entry[0]);
+            var tabInfo = new TabInfo(entry[1]["tab"]);
+            tabInfo.setAll(entry[1]);
+            entry[1] = tabInfo;
+        }
+
+        tabInfoMap = new Map(restoredEntries);
+        callback();
+    })
+}
 
 /// Listeners 
 
@@ -189,10 +217,9 @@ function init_extension() {
         console.log("[DEBUG] Initial tabs are added into info map");
         console.log(tabInfoMap);
 
+        backupTabInfo();
         ungroupAll();
     });
-
-
 
     chrome.storage.sync.set({ "tab_info_map": tabInfoMap });
 
@@ -378,10 +405,29 @@ function getTabListsByTime() {
 
 // Regroup all collected tabs
 function regroup() {
-    let [firstStage, secondStage] = getTabListsByTime();
-    ungroupAll();
-    groupTabs(firstStage, THRESHOLD[0]);
-    groupTabs(secondStage, THRESHOLD[1]);
+    if (tabInfoMap.size == 0) {
+        chrome.tabs.query({}).then((tabs) => {
+            if (tabs.length > 0) {
+                console.log("[DEBUG] Undefined behavior => restore logic enabled!!!");
+                restoreTabInfo(() => {
+                    if (currentActiveTab === undefined) {
+                        for (var tab of tabs) {
+                            if (tab.active) currentActiveTab = { "tabId": tab.id, "windowId": tab.windowId };
+                        }
+                    }
+                    regroup();
+                });
+            };
+        });
+
+    } else {
+        let [firstStage, secondStage] = getTabListsByTime();
+        ungroupAll();
+        groupTabs(firstStage, THRESHOLD[0]);
+        groupTabs(secondStage, THRESHOLD[1]);
+        backupTabInfo();
+        // restoreTabInfo(() => {}); for test
+    }
 }
 
 // Ungroup all tabs in current state
