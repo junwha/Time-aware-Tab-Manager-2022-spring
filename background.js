@@ -363,7 +363,7 @@ chrome.tabs.onUpdated.addListener((tabId, changeInfo, tab) => {
     if (changeInfo["groupId"] !== undefined) {
         console.log(changeInfo["groupId"]);
         if (changeInfo["groupId"] == -1 || isTargetGroup(changeInfo["groupId"])) {
-            console.log("[DEBUG] this tab is removed from white list: " + tabId);
+            // console.log("[DEBUG] this tab is removed from white list: " + tabId);
             console.log(tabInfoMap);
             tabInfoMap.get(tabId).setWhiteList(false);
         } else {
