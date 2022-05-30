@@ -3,7 +3,7 @@
 // found in the LICENSE file.
 'use strict';
 
-const DEBUG = true;
+const DEBUG = false;
 const ALARM_INTERVAL = 1; // Threshold for update groups (minute)
 const THRESHOLD = [5, 60]; // Threshold for first and second stage (minute)
 const SKIP_THRESHOLD = 2000; // Threshold for removing current visiting tab from target (milliseconds)
@@ -260,6 +260,13 @@ chrome.alarms.onAlarm.addListener((alarm) => {
     if (currentActiveTab !== undefined) regroup(); // if current tab is null, we don't need to regroup yet
 });
 
+chrome.runtime.onSuspend.addListener(
+    () => {
+        console.log("[DEBUG] suspended by some reason");
+    }
+);
+
+
 // Update tab groups when active tab is changed
 chrome.tabs.onActivated.addListener(
     async (chrome_tab_info) => {
@@ -363,7 +370,7 @@ chrome.tabs.onUpdated.addListener((tabId, changeInfo, tab) => {
     if (changeInfo["groupId"] !== undefined) {
         console.log(changeInfo["groupId"]);
         if (changeInfo["groupId"] == -1 || isTargetGroup(changeInfo["groupId"])) {
-            console.log("[DEBUG] this tab is removed from white list: " + tabId);
+            // console.log("[DEBUG] this tab is removed from white list: " + tabId);
             console.log(tabInfoMap);
             tabInfoMap.get(tabId).setWhiteList(false);
         } else {
