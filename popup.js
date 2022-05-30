@@ -53,9 +53,9 @@ var closeButton1 = document.getElementById("closeT1");
 
 chrome.storage.sync.get(["threshold1", "threshold2"], function (items) {
     thresholdBar1.value = items["threshold1"];
-    thresholdBar2.value = items["threshold2"];
+    thresholdBar2.value = parseInt(items["threshold2"] / 60);
     thresholdValue1.innerHTML = thresholdBar1.value;
-    thresholdValue2.innerHTML = thresholdBar2.value;
+    thresholdValue2.innerHTML = parseInt(items["threshold2"] / 60);
 });
 
 closeButton2.onclick = function () {
@@ -79,15 +79,15 @@ closeButton1.onclick = function () {
 thresholdBar1.oninput = function () {
     thresholdValue1.innerHTML = thresholdBar1.value;
     chrome.storage.sync.set({ "threshold1": thresholdBar1.value });
-    chrome.runtime.sendMessage({ type: 1, thresholds: [thresholdBar1.value, thresholdBar2.value] }, function (response) {
+    chrome.runtime.sendMessage({ type: 1, thresholds: [thresholdBar1.value, parseInt(thresholdBar2.value) * 60] }, function (response) {
         console.log(response);
     });
     console.log(this.value);
 }
 thresholdBar2.oninput = function () {
     thresholdValue2.innerHTML = thresholdBar2.value;
-    chrome.storage.sync.set({ "threshold2": thresholdBar2.value });
-    chrome.runtime.sendMessage({ type: 1, thresholds: [thresholdBar1.value, thresholdBar2.value] }, function (response) {
+    chrome.storage.sync.set({ "threshold2": parseInt(thresholdBar2.value) * 60 });
+    chrome.runtime.sendMessage({ type: 1, thresholds: [thresholdBar1.value, parseInt(thresholdBar2.value) * 60] }, function (response) {
         console.log(response);
     });
     console.log(this.value);

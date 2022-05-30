@@ -577,10 +577,10 @@ async function group(tidList, elapsedTime, windowId, trial) {
                 var _color, _timeInfo;
 
                 if (parseInt(elapsedTime) >= parseInt(THRESHOLD[1])) {
-                    _timeInfo = `${THRESHOLD[1]}m`;
+                    _timeInfo = THRESHOLD[1] < 60 ? `${THRESHOLD[1]}m` : `${parseInt(THRESHOLD[1] / 60)}h`;
                     _color = "red";
                 } else if (parseInt(elapsedTime) >= parseInt(THRESHOLD[0])) {
-                    _timeInfo = `${THRESHOLD[0]}m`;
+                    _timeInfo = THRESHOLD[0] < 60 ? `${THRESHOLD[0]}m` : `${parseInt(THRESHOLD[0] / 60)}h`;
                     _color = "yellow";
                 } else {
                     return;
