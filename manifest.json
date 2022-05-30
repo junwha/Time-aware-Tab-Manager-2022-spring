@@ -7,7 +7,8 @@
     "notifications",
     "storage",
     "tabs",
-    "tabGroups"
+    "tabGroups",
+    "idle"
   ],
   "background": {
     "service_worker": "background.js"

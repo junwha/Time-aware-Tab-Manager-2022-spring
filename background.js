@@ -266,6 +266,18 @@ chrome.runtime.onSuspend.addListener(
     }
 );
 
+chrome.idle.onStateChanged.addListener(
+    (newState) => {
+        if (newState != "active") {
+            console.log("[DEBUG] process is in idle state (or locked)");
+            backupTabInfo();
+        } else {
+            console.log("[DEBUG] process is in active state");
+            restoreTabInfo(() => { });
+        }
+    }
+);
+
 
 // Update tab groups when active tab is changed
 chrome.tabs.onActivated.addListener(
