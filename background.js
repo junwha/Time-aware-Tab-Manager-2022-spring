@@ -3,11 +3,11 @@
 // found in the LICENSE file.
 'use strict';
 
-const DEBUG = false;
+const DEBUG = true;
 const ALARM_INTERVAL = 1; // Threshold for update groups (minute)
 const THRESHOLD = [60, 120]; // Threshold for first and second stage (minute)
-const SKIP_THRESHOLD = 1000; // Threshold for removing current visiting tab from target (milliseconds)
-const MAX_TRIAL = 5;
+const SKIP_THRESHOLD = 2000; // Threshold for removing current visiting tab from target (milliseconds)
+const MAX_TRIAL = 50;
 // Constants
 const TIMEOUT = 100;
 const MIN_TO_MS = DEBUG ? 1000 : 60 * 1000;
@@ -379,30 +379,34 @@ chrome.tabs.onRemoved.addListener(
 );
 
 chrome.tabs.onUpdated.addListener((tabId, changeInfo, tab) => {
-    if (changeInfo["groupId"] !== undefined) {
-        console.log(changeInfo["groupId"]);
-        if (changeInfo["groupId"] == -1 || isTargetGroup(changeInfo["groupId"])) {
-            // console.log("[DEBUG] this tab is removed from white list: " + tabId);
-            console.log(tabInfoMap);
-            tabInfoMap.get(tabId).setWhiteList(false);
-        } else {
-            console.log("[DEBUG] this tab is added into white list: " + tabId);
-            console.log(tabInfoMap);
-            tabInfoMap.get(tabId).setWhiteList(true);
+    restoreTabInfo(() => {
+        if (changeInfo["groupId"] !== undefined) {
+            console.log(changeInfo["groupId"]);
+            if (changeInfo["groupId"] == -1 || isTargetGroup(changeInfo["groupId"])) {
+                // console.log("[DEBUG] this tab is removed from white list: " + tabId);
+                console.log(tabInfoMap);
+                tabInfoMap.get(tabId).setWhiteList(false);
+            } else {
+                console.log("[DEBUG] this tab is added into white list: " + tabId);
+                console.log(tabInfoMap);
+                tabInfoMap.get(tabId).setWhiteList(true);
+
+            }
+        } else if (changeInfo["pinned"] !== undefined) {
+            if (!changeInfo["pinned"]) {
+                // console.log("[DEBUG] this tab is removed from white list: " + tabId);
+                console.log(tabInfoMap);
+                tabInfoMap.get(tabId).setWhiteList(false);
+            } else {
+                console.log("[DEBUG] this tab is added into white list: " + tabId);
+                console.log(tabInfoMap);
+                tabInfoMap.get(tabId).setWhiteList(true);
+
+            }
 
         }
-    } else if (changeInfo["pinned"] !== undefined) {
-        if (!changeInfo["pinned"]) {
-            // console.log("[DEBUG] this tab is removed from white list: " + tabId);
-            console.log(tabInfoMap);
-            tabInfoMap.get(tabId).setWhiteList(false);
-        } else {
-            console.log("[DEBUG] this tab is added into white list: " + tabId);
-            console.log(tabInfoMap);
-            tabInfoMap.get(tabId).setWhiteList(true);
-
-        }
-    }
+        backupTabInfo();
+    });
 });
 
 
@@ -435,29 +439,31 @@ function getTabListsByTime() {
 
 // Regroup all collected tabs
 function regroup() {
-    if (tabInfoMap.size == 0) {
-        chrome.tabs.query({}).then((tabs) => {
-            if (tabs.length > 0) {
-                console.log("[DEBUG] Undefined behavior => restore logic enabled!!!");
-                restoreTabInfo(() => {
-                    if (currentActiveTab === undefined) {
-                        for (var tab of tabs) {
-                            if (tab.active) currentActiveTab = { "tabId": tab.id, "windowId": tab.windowId };
+    restoreTabInfo(() => {
+        if (tabInfoMap.size == 0) {
+            chrome.tabs.query({}).then((tabs) => {
+                if (tabs.length > 0) {
+                    console.log("[DEBUG] Undefined behavior => restore logic enabled!!!");
+                    restoreTabInfo(() => {
+                        if (currentActiveTab === undefined) {
+                            for (var tab of tabs) {
+                                if (tab.active) currentActiveTab = { "tabId": tab.id, "windowId": tab.windowId };
+                            }
                         }
-                    }
-                    regroup();
-                });
-            };
-        });
+                        regroup();
+                    });
+                };
+            });
 
-    } else {
-        let [firstStage, secondStage] = getTabListsByTime();
-        ungroupAll();
-        groupTabs(firstStage, THRESHOLD[0]);
-        groupTabs(secondStage, THRESHOLD[1]);
-        backupTabInfo();
-        // restoreTabInfo(() => {}); for test
-    }
+        } else {
+            let [firstStage, secondStage] = getTabListsByTime();
+            ungroupAll();
+            groupTabs(firstStage, THRESHOLD[0]);
+            groupTabs(secondStage, THRESHOLD[1]);
+            backupTabInfo();
+            // restoreTabInfo(() => {}); for test
+        }
+    });
 }
 
 // Ungroup all tabs in current state
