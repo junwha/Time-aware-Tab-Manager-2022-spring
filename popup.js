@@ -52,9 +52,9 @@ var closeButton2 = document.getElementById("closeT2");
 var closeButton1 = document.getElementById("closeT1");
 
 chrome.storage.sync.get(["threshold1", "threshold2"], function (items) {
-    thresholdBar1.value = items["threshold1"];
+    thresholdBar1.value = parseInt(items["threshold1"]);
     thresholdBar2.value = parseInt(items["threshold2"] / 60);
-    thresholdValue1.innerHTML = thresholdBar1.value;
+    thresholdValue1.innerHTML = parseInt(thresholdBar1.value);
     thresholdValue2.innerHTML = parseInt(items["threshold2"] / 60);
 });
 
