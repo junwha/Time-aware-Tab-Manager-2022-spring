@@ -5,7 +5,7 @@
 
 const DEBUG = true;
 const ALARM_INTERVAL = 1; // Threshold for update groups (minute)
-const THRESHOLD = [5, 60]; // Threshold for first and second stage (minute)
+const THRESHOLD = [60, 120]; // Threshold for first and second stage (minute)
 const SKIP_THRESHOLD = 2000; // Threshold for removing current visiting tab from target (milliseconds)
 const MAX_TRIAL = 3;
 // Constants
