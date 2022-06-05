@@ -5,15 +5,39 @@
 
 const DEBUG = true;
 const ALARM_INTERVAL = 1; // Threshold for update groups (minute)
-const THRESHOLD = [60, 120]; // Threshold for first and second stage (minute)
 const SKIP_THRESHOLD = 1000; // Threshold for removing current visiting tab from target (milliseconds)
 const MAX_TRIAL = 5;
 // Constants
 const TIMEOUT = 100;
 const MIN_TO_MS = DEBUG ? 1000 : 60 * 1000;
 
-let currentActiveTab;
-let tabInfoMap = new Map();
+let globalVariable;
+class GlobalVariable {
+    constructor(THRESHOLD, map, currentActiveTab) {
+        this.THRESHOLD = THRESHOLD; //[60, 120]; // Threshold for first and second stage (minute)
+        this.tabInfoMap = map;
+        this.currentActiveTab = currentActiveTab;
+    }
+
+    getTHRESHOLD() { return this.THRESHOLD; }
+    getTabInfoMap() { return this.tabInfoMap; }
+    getCurrentActiveTab() { return this.currentActiveTab; }
+
+    setTHRESHOLD(THRESHOLD) { this.THRESHOLD = THRESHOLD; backupGlobal(); }
+    setCurrentActiveTab(tab) { this.currentActiveTab = tab; backupGlobal(); }
+    setTabInfoMap(tabInfoMap) { this.tabInfoMap = tabInfoMap; backupGlobal(); }
+}
+
+function withGlobal(callback) {
+    if (globalVariable === undefined) {
+        restoreGlobal(() => {
+            callback(globalVariable);
+        });
+    } else {
+        callback(globalVariable);
+    }
+}
+
 
 ///
 /// Message passing with popup.js
@@ -21,20 +45,27 @@ let tabInfoMap = new Map();
 chrome.runtime.onMessage.addListener(
     function (request, sender, sendResponse) {
         if (request.type == 0) { // Close tabs
-            let tabAllList = getTabListsByTime();
+            withGlobal((global) => {
+                var tabInfoMap = global.getTabInfoMap();
+                var THRESHOLD = global.getTHRESHOLD();
+                var currentActiveTab = global.getCurrentActiveTab();
+                let tabAllList = getTabListsByTime(tabInfoMap, THRESHOLD, currentActiveTab);
 
-            var tabIdList = [];
+                var tabIdList = [];
 
-            for (const tab_info of tabAllList[request.level]) {
-                tabIdList.push(tab_info.getTabId());
-            }
+                for (const tab_info of tabAllList[request.level]) {
+                    tabIdList.push(tab_info.getTabId());
+                }
 
-            remove(tabIdList);
-            console.log("closed");
+                remove(tabIdList);
+                console.log("closed");
+
+            });
         } else if (request.type == 1) { // Update thresholds
             console.log(request);
-            THRESHOLD[0] = request.thresholds[0];
-            THRESHOLD[1] = request.thresholds[1];
+            withGlobal((global) => {
+                global.setTHRESHOLD([request.thresholds[0], request.thresholds[1]]);
+            });
         } else if (request.type == 2) {
             sendFavIcons(sendResponse);
             regroup();
@@ -50,41 +81,49 @@ chrome.runtime.onMessage.addListener(
 
 // Send fav icons
 async function sendFavIcons(sendResponse) {
-    let twoLevelInfo = getTabListsByTime();
-    console.log("Background will send response");
+    withGlobal(async (global) => {
+        var tabInfoMap = global.getTabInfoMap();
+        var THRESHOLD = global.getTHRESHOLD();
+        var currentActiveTab = global.getCurrentActiveTab();
+        let twoLevelInfo = getTabListsByTime(tabInfoMap, THRESHOLD, currentActiveTab);
+        console.log("Background will send response");
 
-    var prom_lists = [[], []];
-    console.log(twoLevelInfo);
+        var prom_lists = [[], []];
+        console.log(twoLevelInfo);
 
-    for (var i = 0; i < 2; i++) {
-        for (var j = 0; j < twoLevelInfo[i].length; j++) {
-            if (j > 8) break;
-            prom_lists[i].push(chrome.tabs.get(twoLevelInfo[i][j].getTabId()));
-        }
-    }
-
-    var twoLevelFavIcons = [[], []];
-
-    for (var i = 0; i < 2; i++) {
-        var tabList = await Promise.all(prom_lists[i]);
-        for (var tab of tabList) {
-            console.log(tab.favIconUrl);
-            if (tab.favIconUrl != "") {
-                twoLevelFavIcons[i].push(tab.favIconUrl);
-            } else {
-                twoLevelFavIcons[i].push("https://upload.wikimedia.org/wikipedia/commons/thumb/e/e1/Google_Chrome_icon_%28February_2022%29.svg/1920px-Google_Chrome_icon_%28February_2022%29.svg.png");
+        for (var i = 0; i < 2; i++) {
+            for (var j = 0; j < twoLevelInfo[i].length; j++) {
+                if (j > 8) break;
+                prom_lists[i].push(chrome.tabs.get(twoLevelInfo[i][j].getTabId()));
             }
+        }
 
+        var twoLevelFavIcons = [[], []];
+
+        for (var i = 0; i < 2; i++) {
+            var tabList = await Promise.all(prom_lists[i]);
+            for (var tab of tabList) {
+                console.log(tab.favIconUrl);
+                if (tab.favIconUrl != "") {
+                    twoLevelFavIcons[i].push(tab.favIconUrl);
+                } else {
+                    twoLevelFavIcons[i].push("https://upload.wikimedia.org/wikipedia/commons/thumb/e/e1/Google_Chrome_icon_%28February_2022%29.svg/1920px-Google_Chrome_icon_%28February_2022%29.svg.png");
+                }
+
+            }
         }
-    }
-    console.log("Send response!");
-    sendResponse({
-        status: twoLevelFavIcons[0].length > 0 || twoLevelFavIcons[1].length > 0,
-        tab_info: {
-            first: twoLevelFavIcons[0],
-            second: twoLevelFavIcons[1]
-        }
+        console.log("Send response!");
+        sendResponse({
+            status: twoLevelFavIcons[0].length > 0 || twoLevelFavIcons[1].length > 0,
+            tab_info: {
+                first: twoLevelFavIcons[0],
+                second: twoLevelFavIcons[1]
+            }
+        });
     });
+
+
+
 }
 
 /// Class for storing information of tabs.
@@ -94,8 +133,6 @@ class TabInfo {
     constructor(tab) {
         console.log("[DEBUG] new tab information is created: " + tab.title);
         this.tab = tab;
-        // this.tab_id = tab_id;
-        // this.windowId = windowId;
         this.lastDeactivatedTime = getUnixTime();
         this.lastActivatedTime = getUnixTime();
         this.isWhiteList = false;
@@ -144,49 +181,34 @@ class TabInfo {
     }
 }
 
-// class TabInfoList { // @Singleton object
-//     constructor() {
-//         chrome.storage.local.set({ "tab_info_list": [] });
-//     }
-//     push(elem) {
-//         chrome.storage.local.get(["tab_info_list"], function (items) {
-//             temp_list = items["tab_info_list"];
-//             temp_list.push(elem);
-//             chrome.storage.local.set({ "tab_info_list": temp_list });
-//         });
-//     }
-
-//     filter() {
-//         chrome.storage.local.get(["tab_info_list"], function (items) {
-//             temp_list = items["tab_info_list"];
-//             temp_list.push(elem);
-//             chrome.storage.sync.set({ "tab_info_list": temp_list });
-//         });
-//     }
-// }
-
 /// Utils
 
 function getUnixTime() {
     return Math.floor(new Date().getTime());
 }
 
-function removeTabFromList(tab_id) {
+function removeTabFromList(tab_id, tabInfoMap) {
     tabInfoMap.delete(tab_id);
 }
 
-function getTabFromMap(tab_id) {
+function getTabFromMap(tab_id, tabInfoMap) {
     return tabInfoMap.get(tab_id);
 }
 
 // https://stackoverflow.com/questions/31605172/how-can-i-store-a-map-object-in-a-chrome-app
-function backupTabInfo() {
-    chrome.storage.local.set({ "tab_info_map": Object.fromEntries(tabInfoMap) });
+function backupGlobal() {
+    console.log("[DEBUG] backup bellow structure")
+    console.log(Object.fromEntries(globalVariable.getTabInfoMap()));
+    chrome.storage.local.set({ "global_variable": globalVariable, "tab_info_map": Object.fromEntries(globalVariable.getTabInfoMap()) });
+
 }
 
-function restoreTabInfo(callback) {
-    chrome.storage.local.get(["tab_info_map"], (items) => {
+function restoreGlobal(callback) {
+    chrome.storage.local.get(["global_variable", "tab_info_map"], (items) => {
         console.log("[DEBUG] Restore tab info from local storage");
+        var restoredObject = items["global_variable"];
+        console.log(items);
+        /// Restore tab info map
         var restoredEntries = Object.entries(items["tab_info_map"]);
 
         for (var entry of restoredEntries) {
@@ -196,9 +218,12 @@ function restoreTabInfo(callback) {
             entry[1] = tabInfo;
         }
 
-        tabInfoMap = new Map(restoredEntries);
+        var tabInfoMap = new Map(restoredEntries);
+
+        // Restore global variable
+        globalVariable = new GlobalVariable(restoredObject["THRESHOLD"], tabInfoMap, restoredObject["currentActiveTab"]);
         callback();
-    })
+    });
 }
 
 /// Listeners 
@@ -210,18 +235,24 @@ function init_extension() {
     );
 
     chrome.tabs.query({}).then((tabs) => {
+        var tabInfoMap = new Map();
+        globalVariable = new GlobalVariable([60, 120], tabInfoMap, undefined);
+        // chrome.storage.local.set({ "global_variable": globalVariable });
+
         for (var tab of tabs) {
-            if (tab.active) currentActiveTab = { "tabId": tab.id, "windowId": tab.windowId };
+            if (tab.active) globalVariable.setCurrentActiveTab({ "tabId": tab.id, "windowId": tab.windowId });
             tabInfoMap.set(tab.id, new TabInfo(tab));
+            // console.log(globalVariable);
         }
+
         console.log("[DEBUG] Initial tabs are added into info map");
         console.log(tabInfoMap);
 
-        backupTabInfo();
         ungroupAll();
+
+        backupGlobal();
     });
 
-    chrome.storage.sync.set({ "tab_info_map": tabInfoMap });
 
 
 }
@@ -229,7 +260,11 @@ function init_extension() {
 chrome.runtime.onInstalled.addListener((details) => {
     // Initialize periodical timer
     init_extension();
-    chrome.storage.sync.set({ "threshold1": THRESHOLD[0], "threshold2": THRESHOLD[1] }); // Initial thresholds
+    withGlobal((global) => {
+        var THRESHOLD = global.getTHRESHOLD();
+        chrome.storage.sync.set({ "threshold1": THRESHOLD[0], "threshold2": THRESHOLD[1] }); // Initial thresholds
+    });
+
 
 });
 
@@ -241,23 +276,28 @@ chrome.runtime.onStartup.addListener(
 
         // Restore thresholds from storage (popup.js has saved the values)
         chrome.storage.sync.get(["threshold1", "threshold2"], function (items) {
-            THRESHOLD[0] = items["threshold1"];
-            THRESHOLD[1] = items["threshold2"];
+            withGlobal((global) => {
+                global.setTHRESHOLD([items["threshold1"], items["threshold2"]]);
+                var THRESHOLD = global.getTHRESHOLD();
+                console.log("[DEBUG] initial thresholds are: " + THRESHOLD[0] + ", " + THRESHOLD[1]);
+            });
         });
 
         chrome.runtime.connect();
 
-        console.log("[DEBUG] initial thresholds are: " + THRESHOLD[0] + ", " + THRESHOLD[1]);
+
     }
 );
 
 // Periodically update tab groups
 chrome.alarms.onAlarm.addListener((alarm) => {
     console.log("[DEBUG] checking on interval ... ");
-    console.log(tabInfoMap);
+    console.log(globalVariable);
+
 
     // restore
-    if (currentActiveTab !== undefined) regroup(); // if current tab is null, we don't need to regroup yet
+    // if (currentActiveTab !== undefined) regroup(); // if current tab is null, we don't need to regroup yet
+    regroup();
 });
 
 chrome.runtime.onSuspend.addListener(
@@ -270,10 +310,8 @@ chrome.idle.onStateChanged.addListener(
     (newState) => {
         if (newState != "active") {
             console.log("[DEBUG] process is in idle state (or locked)");
-            backupTabInfo();
         } else {
             console.log("[DEBUG] process is in active state");
-            restoreTabInfo(() => { });
         }
     }
 );
@@ -282,34 +320,40 @@ chrome.idle.onStateChanged.addListener(
 // Update tab groups when active tab is changed
 chrome.tabs.onActivated.addListener(
     async (chrome_tab_info) => {
-        // Initialize
-        if (currentActiveTab === undefined) {
-            currentActiveTab = chrome_tab_info;
-        }
+        withGlobal((global) => {
+            var tabInfoMap = global.getTabInfoMap();
+            var currentActiveTab = global.getCurrentActiveTab();
 
-        let t = getTabFromMap(currentActiveTab.tabId); // Last activated tab
+            // Initialize
+            if (currentActiveTab === undefined) {
+                global.setCurrentActiveTab(chrome_tab_info);
+            }
 
-        if (t !== undefined) {
-            if (t.getActiveTime() > SKIP_THRESHOLD)
-                t.setLastDeactivatedTime();
-            chrome.tabs.get(t.getTabId()).then((tab) => {
-                console.log("[DEBUG] latest tab: " + tab.title);
-                t.setTab(tab);
-            });
-        }
-        currentActiveTab = chrome_tab_info; // Update active tab as current active tab
+            let t = getTabFromMap(currentActiveTab.tabId, tabInfoMap); // Last activated tab
 
-        let t2 = getTabFromMap(currentActiveTab.tabId); // Newly activated tab
+            if (t !== undefined) {
+                if (t.getActiveTime() > SKIP_THRESHOLD)
+                    t.setLastDeactivatedTime();
+                chrome.tabs.get(t.getTabId()).then((tab) => {
+                    console.log("[DEBUG] latest tab: " + tab.title);
+                    t.setTab(tab);
+                });
+            }
 
-        if (t2 !== undefined) {
-            t2.setLastActivatedTime();
-            chrome.tabs.get(t2.getTabId()).then((tab) => {
-                console.log("[DEBUG] current tab: " + tab.title);
-                t2.setTab(tab);
-            });
-        }
+            global.setCurrentActiveTab(chrome_tab_info); // Update active tab as current active tab
 
-        regroup();
+            let t2 = getTabFromMap(currentActiveTab.tabId, tabInfoMap); // Newly activated tab
+
+            if (t2 !== undefined) {
+                t2.setLastActivatedTime();
+                chrome.tabs.get(t2.getTabId()).then((tab) => {
+                    console.log("[DEBUG] current tab: " + tab.title);
+                    t2.setTab(tab);
+                });
+            }
+
+            regroup();
+        });
     }
 );
 
@@ -365,16 +409,23 @@ function markTabsInGroup(gid, mark) {
 // Add tab into map
 chrome.tabs.onCreated.addListener(
     async (tab) => {
-        var tabInfo = new TabInfo(tab);
-        tabInfoMap.set(tabInfo.getTabId(), tabInfo);
+        withGlobal((global) => {
+            var tabInfoMap = global.getTabInfoMap();
+            var tabInfo = new TabInfo(tab);
+            tabInfoMap.set(tabInfo.getTabId(), tabInfo);
+            global.setTabInfoMap(tabInfoMap);
+        });
     }
 );
 
 // Remove tab info from from map
 chrome.tabs.onRemoved.addListener(
     async (tab_id, info) => {
-        var current_date = new Date();
-        removeTabFromList(tab_id);
+        withGlobal((global) => {
+            var tabInfoMap = global.getTabInfoMap();
+            removeTabFromList(tab_id, tabInfoMap);
+            global.setTabInfoMap(tabInfoMap);
+        });
     }
 );
 
@@ -410,7 +461,7 @@ chrome.tabs.onRemoved.addListener(
 /// Main Logic
 
 // Return two tab lists satisfying thresholds
-function getTabListsByTime() {
+function getTabListsByTime(tabInfoMap, THRESHOLD, currentActiveTab) {
     let firstStage = [];
     let secondStage = [];
 
@@ -435,48 +486,58 @@ function getTabListsByTime() {
 
 // Regroup all collected tabs
 function regroup() {
-    if (tabInfoMap.size == 0) {
-        chrome.tabs.query({}).then((tabs) => {
-            if (tabs.length > 0) {
-                console.log("[DEBUG] Undefined behavior => restore logic enabled!!!");
-                restoreTabInfo(() => {
-                    if (currentActiveTab === undefined) {
-                        for (var tab of tabs) {
-                            if (tab.active) currentActiveTab = { "tabId": tab.id, "windowId": tab.windowId };
-                        }
-                    }
-                    regroup();
-                });
-            };
-        });
+    withGlobal((global) => {
+        var tabInfoMap = global.getTabInfoMap();
+        var THRESHOLD = global.getTHRESHOLD();
+        var currentActiveTab = global.getCurrentActiveTab();
+        if (tabInfoMap.size == 0) {
+            chrome.tabs.query({}).then((tabs) => {
+                if (tabs.length > 0) {
+                    console.log("[DEBUG] Undefined behavior!!");
+                    // restoreTabInfo(() => {
+                    //     if (currentActiveTab === undefined) {
+                    //         for (var tab of tabs) {
+                    //             if (tab.active) currentActiveTab = { "tabId": tab.id, "windowId": tab.windowId };
+                    //         }
+                    //     }
+                    //     regroup();
+                    // });
+                };
+            });
 
-    } else {
-        let [firstStage, secondStage] = getTabListsByTime();
-        ungroupAll();
-        groupTabs(firstStage, THRESHOLD[0]);
-        groupTabs(secondStage, THRESHOLD[1]);
-        backupTabInfo();
-        // restoreTabInfo(() => {}); for test
-    }
+        } else {
+
+            let [firstStage, secondStage] = getTabListsByTime(tabInfoMap, THRESHOLD, currentActiveTab);
+            ungroupAll();
+            groupTabs(firstStage, THRESHOLD[0]);
+            groupTabs(secondStage, THRESHOLD[1]);
+
+
+            // restoreTabInfo(() => {}); for test
+        }
+    });
 }
 
 // Ungroup all tabs in current state
 async function ungroupAll() {
-    if (tabInfoMap.size == 0)
-        return;
+    withGlobal((global) => {
+        var tabInfoMap = global.getTabInfoMap();
+        if (tabInfoMap.size == 0)
+            return;
 
-    var tabIdList = [];
+        var tabIdList = [];
 
-    for (const t of tabInfoMap.values()) {
-        // if (!t.isInWhiteList()) // Check if the tab is in white list
+        for (const t of tabInfoMap.values()) {
+            // if (!t.isInWhiteList()) // Check if the tab is in white list
 
-        // else
-        //     console.log("[DEBUG] this tab is in white list: " + t.tab.title);
-        tabIdList.push(t.getTabId());
-    }
+            // else
+            //     console.log("[DEBUG] this tab is in white list: " + t.tab.title);
+            tabIdList.push(t.getTabId());
+        }
 
-    // targetGroupIDs = []; // untrack all (we already checked) 
-    ungroup(tabIdList, 1);
+        // targetGroupIDs = []; // untrack all (we already checked) 
+        ungroup(tabIdList, 1);
+    });
 }
 
 // Wrapper of chrome.tabs.ungroup
@@ -583,29 +644,32 @@ async function group(tidList, elapsedTime, windowId, trial) {
     try {
         if (trial <= MAX_TRIAL) {
             chrome.tabs.group({ createProperties: { windowId: windowId }, tabIds: tidList }).catch((e) => setTimeout(() => group(tidList, elapsedTime, windowId, trial + 1), TIMEOUT)).then((gid) => {
-                if (gid === undefined)
-                    return;
-                // console.log(gid);
-                var _color, _timeInfo;
+                withGlobal((global) => {
+                    var THRESHOLD = global.getTHRESHOLD();
+                    if (gid === undefined)
+                        return;
+                    // console.log(gid);
+                    var _color, _timeInfo;
 
-                if (parseInt(elapsedTime) >= parseInt(THRESHOLD[1])) {
-                    _timeInfo = THRESHOLD[1] < 60 ? `${THRESHOLD[1]}m` : `${parseInt(THRESHOLD[1] / 60)}h`;
-                    _color = "red";
-                } else if (parseInt(elapsedTime) >= parseInt(THRESHOLD[0])) {
-                    _timeInfo = THRESHOLD[0] < 60 ? `${THRESHOLD[0]}m` : `${parseInt(THRESHOLD[0] / 60)}h`;
-                    _color = "yellow";
-                } else {
-                    return;
-                }
+                    if (parseInt(elapsedTime) >= parseInt(THRESHOLD[1])) {
+                        _timeInfo = THRESHOLD[1] < 60 ? `${THRESHOLD[1]}m` : `${parseInt(THRESHOLD[1] / 60)}h`;
+                        _color = "red";
+                    } else if (parseInt(elapsedTime) >= parseInt(THRESHOLD[0])) {
+                        _timeInfo = THRESHOLD[0] < 60 ? `${THRESHOLD[0]}m` : `${parseInt(THRESHOLD[0] / 60)}h`;
+                        _color = "yellow";
+                    } else {
+                        return;
+                    }
 
-                // targetGroupIDs.push(gid); // tracking our target groups
+                    // targetGroupIDs.push(gid); // tracking our target groups
 
-                var p = chrome.tabGroups.update(gid, {
-                    color: _color,
-                    title: _timeInfo
+                    var p = chrome.tabGroups.update(gid, {
+                        color: _color,
+                        title: _timeInfo
+                    });
+
+                    p.catch((e) => console.log("[Exception] no group"));
                 });
-
-                p.catch((e) => console.log("[Exception] no group"));
             });
         }
     } catch {
