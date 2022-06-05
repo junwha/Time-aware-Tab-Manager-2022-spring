@@ -3,7 +3,7 @@
 // found in the LICENSE file.
 'use strict';
 
-const DEBUG = true;
+const DEBUG = false;
 const ALARM_INTERVAL = 1; // Threshold for update groups (minute)
 const SKIP_THRESHOLD = 2000; // Threshold for removing current visiting tab from target (milliseconds)
 const MAX_TRIAL = 20;
