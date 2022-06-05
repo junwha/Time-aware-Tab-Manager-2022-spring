@@ -235,11 +235,13 @@ function init_extension() {
         { periodInMinutes: ALARM_INTERVAL },
     );
 
+    var tabInfoMap = new Map();
+    globalVariable = new GlobalVariable([60, 120], tabInfoMap, undefined);
+    backupGlobal();
+
     chrome.tabs.query({}).then((tabs) => {
-        var tabInfoMap = new Map();
-        globalVariable = new GlobalVariable([60, 120], tabInfoMap, undefined);
+
         // chrome.storage.local.set({ "global_variable": globalVariable });
-        backupGlobal();
 
         for (var tab of tabs) {
             if (tab.active) globalVariable.setCurrentActiveTab({ "tabId": tab.id, "windowId": tab.windowId });
