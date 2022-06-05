@@ -182,10 +182,18 @@ function getTabFromMap(tab_id) {
 // https://stackoverflow.com/questions/31605172/how-can-i-store-a-map-object-in-a-chrome-app
 function backupTabInfo() {
     chrome.storage.local.set({ "tab_info_map": Object.fromEntries(tabInfoMap) });
+    chrome.storage.sync.set({ "threshold1_backup": THRESHOLD[0] , "threshold2_backup" : THRESHOLD[1]});
 }
 
 function restoreTabInfo(callback) {
     chrome.storage.local.get(["tab_info_map"], (items) => {
+        chrome.storage.sync.get(["threshold1_backup", "threshold2_backup"], function (items) {
+            THRESHOLD[0] = items["threshold1_backup"];
+            THRESHOLD[1] = items["threshold2_backup"];
+        });
+
+        console.log("[DEBUG] Restore Threshold from local stroage" + "(T1:" + THRESHOLD[0] + ", T2:" + THRESHOLD[1])
+
         console.log("[DEBUG] Restore tab info from local storage");
         var restoredEntries = Object.entries(items["tab_info_map"]);
 
