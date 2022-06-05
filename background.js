@@ -120,6 +120,7 @@ async function sendFavIcons(sendResponse) {
                 second: twoLevelFavIcons[1]
             }
         });
+        regroup();
     });
 
 
