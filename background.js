@@ -5,8 +5,8 @@
 
 const DEBUG = true;
 const ALARM_INTERVAL = 1; // Threshold for update groups (minute)
-const SKIP_THRESHOLD = 1000; // Threshold for removing current visiting tab from target (milliseconds)
-const MAX_TRIAL = 5;
+const SKIP_THRESHOLD = 2000; // Threshold for removing current visiting tab from target (milliseconds)
+const MAX_TRIAL = 20;
 // Constants
 const TIMEOUT = 100;
 const MIN_TO_MS = DEBUG ? 1000 : 60 * 1000;
@@ -54,6 +54,7 @@ chrome.runtime.onMessage.addListener(
                 var tabIdList = [];
 
                 for (const tab_info of tabAllList[request.level]) {
+                    removeTabFromList(tab_info.getTabId(), tabInfoMap);
                     tabIdList.push(tab_info.getTabId());
                 }
 
