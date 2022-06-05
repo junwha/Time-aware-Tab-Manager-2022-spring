@@ -239,6 +239,7 @@ function init_extension() {
         var tabInfoMap = new Map();
         globalVariable = new GlobalVariable([60, 120], tabInfoMap, undefined);
         // chrome.storage.local.set({ "global_variable": globalVariable });
+        backupGlobal();
 
         for (var tab of tabs) {
             if (tab.active) globalVariable.setCurrentActiveTab({ "tabId": tab.id, "windowId": tab.windowId });
