@@ -3,7 +3,7 @@
 // found in the LICENSE file.
 'use strict';
 
-const DEBUG = false;
+const DEBUG = true;
 const ALARM_INTERVAL = 1; // Threshold for update groups (minute)
 const SKIP_THRESHOLD = 2000; // Threshold for removing current visiting tab from target (milliseconds)
 const MAX_TRIAL = 20;
@@ -425,7 +425,7 @@ chrome.tabs.onCreated.addListener(
 
 // Remove tab info from from map
 chrome.tabs.onRemoved.addListener(
-    async (tab_id, info) => {
+    (tab_id, info) => {
         withGlobal((global) => {
             var tabInfoMap = global.getTabInfoMap();
             removeTabFromList(tab_id, tabInfoMap);
