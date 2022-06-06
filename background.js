@@ -39,6 +39,7 @@ function withGlobal(callback) {
     } else {
         callback(globalVariable);
     }
+    backupGlobal();
 }
 
 
@@ -194,6 +195,7 @@ function getUnixTime() {
 
 function removeTabFromList(tab_id, tabInfoMap) {
     tabInfoMap.delete(tab_id);
+    backupGlobal();
 }
 
 function getTabFromMap(tab_id, tabInfoMap) {
@@ -318,8 +320,10 @@ chrome.idle.onStateChanged.addListener(
     (newState) => {
         if (newState != "active") {
             console.log("[DEBUG] process is in idle state (or locked)");
+            backupGlobal();
         } else {
             console.log("[DEBUG] process is in active state");
+            restoreGlobal(() => { });
         }
     }
 );
@@ -346,6 +350,7 @@ chrome.tabs.onActivated.addListener(
                     console.log("[DEBUG] latest tab: " + tab.title);
                     t.setTab(tab);
                 });
+                backupGlobal();
             }
 
             global.setCurrentActiveTab(chrome_tab_info); // Update active tab as current active tab
@@ -358,6 +363,7 @@ chrome.tabs.onActivated.addListener(
                     console.log("[DEBUG] current tab: " + tab.title);
                     t2.setTab(tab);
                 });
+                backupGlobal();
             }
 
             regroup();
@@ -516,10 +522,10 @@ function regroup() {
         } else {
 
             let [firstStage, secondStage] = getTabListsByTime(tabInfoMap, THRESHOLD, currentActiveTab);
-            ungroupAll(tabInfoMap);
-            groupTabs(firstStage, THRESHOLD[0]);
-            groupTabs(secondStage, THRESHOLD[1]);
-
+            ungroupAll(tabInfoMap).then(() => {
+                groupTabs(firstStage, THRESHOLD[0]);
+                groupTabs(secondStage, THRESHOLD[1]);
+            });
 
             // restoreTabInfo(() => {}); for test
         }
@@ -543,7 +549,7 @@ async function ungroupAll(tabInfoMap) {
     }
 
     // targetGroupIDs = []; // untrack all (we already checked) 
-    ungroup(tabIdList, 1);
+    return ungroup(tabIdList, 1);
 }
 
 // Wrapper of chrome.tabs.ungroup
