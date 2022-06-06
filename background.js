@@ -31,6 +31,9 @@ class GlobalVariable {
 function withGlobal(callback) {
     if (globalVariable === undefined) {
         restoreGlobal(() => {
+            if (globalVariable === undefined) {
+                init_extension();
+            }
             callback(globalVariable);
         });
     } else {
