@@ -58,7 +58,9 @@ chrome.runtime.onMessage.addListener(
                 var tabIdList = [];
 
                 for (const tab_info of tabAllList[request.level]) {
-                    removeTabFromList(tab_info.getTabId(), tabInfoMap);
+                    tabInfoMap.delete(tab_info.getTabId());
+                    global.setTabInfoMap(tabInfoMap);
+
                     tabIdList.push(tab_info.getTabId());
                 }
 
@@ -193,14 +195,6 @@ function getUnixTime() {
     return Math.floor(new Date().getTime());
 }
 
-function removeTabFromList(tab_id, tabInfoMap) {
-    tabInfoMap.delete(tab_id);
-    backupGlobal();
-}
-
-function getTabFromMap(tab_id, tabInfoMap) {
-    return tabInfoMap.get(tab_id);
-}
 
 // https://stackoverflow.com/questions/31605172/how-can-i-store-a-map-object-in-a-chrome-app
 function backupGlobal() {
@@ -211,26 +205,25 @@ function backupGlobal() {
 }
 
 function restoreGlobal(callback) {
-    chrome.storage.local.get(["global_variable", "tab_info_map"], (items) => {
-        console.log("[DEBUG] Restore tab info from local storage");
-        var restoredObject = items["global_variable"];
-        console.log(items);
-        /// Restore tab info map
-        var restoredEntries = Object.entries(items["tab_info_map"]);
+    var items = await chrome.storage.local.get(["global_variable", "tab_info_map"]);
+    console.log("[DEBUG] Restore tab info from local storage");
+    var restoredObject = items["global_variable"];
+    console.log(items);
+    /// Restore tab info map
+    var restoredEntries = Object.entries(items["tab_info_map"]);
 
-        for (var entry of restoredEntries) {
-            entry[0] = parseInt(entry[0]);
-            var tabInfo = new TabInfo(entry[1]["tab"]);
-            tabInfo.setAll(entry[1]);
-            entry[1] = tabInfo;
-        }
+    for (var entry of restoredEntries) {
+        entry[0] = parseInt(entry[0]);
+        var tabInfo = new TabInfo(entry[1]["tab"]);
+        tabInfo.setAll(entry[1]);
+        entry[1] = tabInfo;
+    }
 
-        var tabInfoMap = new Map(restoredEntries);
+    var tabInfoMap = new Map(restoredEntries);
 
-        // Restore global variable
-        globalVariable = new GlobalVariable(restoredObject["THRESHOLD"], tabInfoMap, restoredObject["currentActiveTab"]);
-        callback();
-    });
+    // Restore global variable
+    globalVariable = new GlobalVariable(restoredObject["THRESHOLD"], tabInfoMap, restoredObject["currentActiveTab"]);
+    callback();
 }
 
 /// Listeners 
@@ -311,6 +304,7 @@ chrome.alarms.onAlarm.addListener((alarm) => {
 
 chrome.runtime.onSuspend.addListener(
     () => {
+        backupTabInfo();
         console.log("[DEBUG] suspended by some reason");
     }
 );
@@ -340,7 +334,7 @@ chrome.tabs.onActivated.addListener(
                 global.setCurrentActiveTab(chrome_tab_info);
             }
 
-            let t = getTabFromMap(currentActiveTab.tabId, tabInfoMap); // Last activated tab
+            let t = tabInfoMap.get(currentActiveTab.tabId);
 
             if (t !== undefined) {
                 if (t.getActiveTime() > SKIP_THRESHOLD)
@@ -349,12 +343,12 @@ chrome.tabs.onActivated.addListener(
                     console.log("[DEBUG] latest tab: " + tab.title);
                     t.setTab(tab);
                 });
-                backupGlobal();
+                global.setTabInfoMap(tabInfoMap);
             }
 
             global.setCurrentActiveTab(chrome_tab_info); // Update active tab as current active tab
 
-            let t2 = getTabFromMap(currentActiveTab.tabId, tabInfoMap); // Newly activated tab
+            let t2 = tabInfoMap.get(currentActiveTab.tabId);// Newly activated tab
 
             if (t2 !== undefined) {
                 t2.setLastActivatedTime();
@@ -362,7 +356,7 @@ chrome.tabs.onActivated.addListener(
                     console.log("[DEBUG] current tab: " + tab.title);
                     t2.setTab(tab);
                 });
-                backupGlobal();
+                global.setTabInfoMap(tabInfoMap);
             }
 
             regroup();
@@ -436,7 +430,7 @@ chrome.tabs.onRemoved.addListener(
     (tab_id, info) => {
         withGlobal((global) => {
             var tabInfoMap = global.getTabInfoMap();
-            removeTabFromList(tab_id, tabInfoMap);
+            tabInfoMap.delete(tab_id);
             global.setTabInfoMap(tabInfoMap);
         });
     }
