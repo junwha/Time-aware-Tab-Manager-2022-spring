@@ -553,7 +553,7 @@ async function ungroup(tabIdList, trial) {
             chrome.tabs.ungroup(tabIdList).catch((e) => {
 
                 setTimeout(
-                    () => ungroup(tabIdList, trial),
+                    () => ungroup(tabIdList, trial + 1),
                     TIMEOUT
                 );
 
