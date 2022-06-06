@@ -205,25 +205,26 @@ function backupGlobal() {
 }
 
 function restoreGlobal(callback) {
-    var items = await chrome.storage.local.get(["global_variable", "tab_info_map"]);
-    console.log("[DEBUG] Restore tab info from local storage");
-    var restoredObject = items["global_variable"];
-    console.log(items);
-    /// Restore tab info map
-    var restoredEntries = Object.entries(items["tab_info_map"]);
+    chrome.storage.local.get(["global_variable", "tab_info_map"], () => {
+        console.log("[DEBUG] Restore tab info from local storage");
+        var restoredObject = items["global_variable"];
+        console.log(items);
+        /// Restore tab info map
+        var restoredEntries = Object.entries(items["tab_info_map"]);
 
-    for (var entry of restoredEntries) {
-        entry[0] = parseInt(entry[0]);
-        var tabInfo = new TabInfo(entry[1]["tab"]);
-        tabInfo.setAll(entry[1]);
-        entry[1] = tabInfo;
-    }
+        for (var entry of restoredEntries) {
+            entry[0] = parseInt(entry[0]);
+            var tabInfo = new TabInfo(entry[1]["tab"]);
+            tabInfo.setAll(entry[1]);
+            entry[1] = tabInfo;
+        }
 
-    var tabInfoMap = new Map(restoredEntries);
+        var tabInfoMap = new Map(restoredEntries);
 
-    // Restore global variable
-    globalVariable = new GlobalVariable(restoredObject["THRESHOLD"], tabInfoMap, restoredObject["currentActiveTab"]);
-    callback();
+        // Restore global variable
+        globalVariable = new GlobalVariable(restoredObject["THRESHOLD"], tabInfoMap, restoredObject["currentActiveTab"]);
+        callback();
+    });
 }
 
 /// Listeners 
@@ -251,7 +252,7 @@ function init_extension() {
         console.log("[DEBUG] Initial tabs are added into info map");
         console.log(tabInfoMap);
 
-        ungroupAll(tabInfoMap);
+        ungroupAll(tabInfoMap, () => { });
 
         backupGlobal();
     });
@@ -516,7 +517,7 @@ function regroup() {
         } else {
 
             let [firstStage, secondStage] = getTabListsByTime(tabInfoMap, THRESHOLD, currentActiveTab);
-            ungroupAll(tabInfoMap).then(() => {
+            ungroupAll(tabInfoMap, () => {
                 groupTabs(firstStage, THRESHOLD[0]);
                 groupTabs(secondStage, THRESHOLD[1]);
             });
@@ -527,7 +528,7 @@ function regroup() {
 }
 
 // Ungroup all tabs in current state
-async function ungroupAll(tabInfoMap) {
+function ungroupAll(tabInfoMap, callback) {
     // var tabInfoMap = global.getTabInfoMap();
     if (tabInfoMap.size == 0)
         return;
@@ -543,26 +544,25 @@ async function ungroupAll(tabInfoMap) {
     }
 
     // targetGroupIDs = []; // untrack all (we already checked) 
-    return ungroup(tabIdList, 1);
+    return ungroup(tabIdList, 1, callback);
 }
 
 // Wrapper of chrome.tabs.ungroup
-async function ungroup(tabIdList, trial) {
+function ungroup(tabIdList, trial, callback) {
     try {
         if (trial <= MAX_TRIAL) {
-            chrome.tabs.ungroup(tabIdList).catch((e) => {
-
+            return chrome.tabs.ungroup(tabIdList).catch((e) => {
                 setTimeout(
                     () => ungroup(tabIdList, trial + 1),
                     TIMEOUT
                 );
-
             });
         }
     } catch {
         console.log("[DEBUG] Promise error on ungroup");
         return;
     }
+    callback();
 }
 
 // Wrapper of chrome.tabs.remove
