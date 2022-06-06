@@ -205,7 +205,7 @@ function backupGlobal() {
 }
 
 function restoreGlobal(callback) {
-    chrome.storage.local.get(["global_variable", "tab_info_map"], () => {
+    chrome.storage.local.get(["global_variable", "tab_info_map"], (items) => {
         console.log("[DEBUG] Restore tab info from local storage");
         var restoredObject = items["global_variable"];
         console.log(items);
