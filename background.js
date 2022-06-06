@@ -6,7 +6,7 @@
 const DEBUG = false;
 const ALARM_INTERVAL = 1; // Threshold for update groups (minute)
 const SKIP_THRESHOLD = 2000; // Threshold for removing current visiting tab from target (milliseconds)
-const MAX_TRIAL = 1;
+const MAX_TRIAL = 10;
 
 // Constants
 const TIMEOUT = 100;
