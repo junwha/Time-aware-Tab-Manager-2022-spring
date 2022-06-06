@@ -565,12 +565,14 @@ async function ungroup(tabIdList, trial, callback) {
 }
 
 // Wrapper of chrome.tabs.remove
-function remove(tabIdList) {
+function remove(tabIdList, trial) {
     chrome.tabs.remove(tabIdList).catch((e) => {
-        setTimeout(
-            () => remove(tabIdList),
-            TIMEOUT
-        );
+        if (trial <= MAX_TRIAL) {
+            setTimeout(
+                () => remove(tabIdList, trial + 1),
+                TIMEOUT
+            );
+        }
     });
 }
 
