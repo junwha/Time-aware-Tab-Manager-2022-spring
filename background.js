@@ -552,7 +552,7 @@ async function ungroup(tabIdList, trial, callback) {
         if (trial <= MAX_TRIAL) {
             chrome.tabs.ungroup(tabIdList).catch((e) => {
                 setTimeout(
-                    () => ungroup(tabIdList, trial + 1),
+                    () => ungroup(tabIdList, trial + 1, callback),
                     TIMEOUT
                 );
             });
@@ -606,7 +606,7 @@ function groupAdjacentTIDs(tabList) {
 }
 
 // Group all tabs
-async function groupTabs(tabInfoList, elapsedTime) {
+function groupTabs(tabInfoList, elapsedTime) {
     if (tabInfoList.length == 0)
         return;
     var promList = [];
