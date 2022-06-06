@@ -304,7 +304,6 @@ chrome.alarms.onAlarm.addListener((alarm) => {
     console.log("[DEBUG] checking on interval ... ");
     console.log(globalVariable);
 
-
     // restore
     // if (currentActiveTab !== undefined) regroup(); // if current tab is null, we don't need to regroup yet
     regroup();
@@ -508,6 +507,7 @@ function regroup() {
             chrome.tabs.query({}).then((tabs) => {
                 if (tabs.length > 0) {
                     console.log("[DEBUG] Undefined behavior!!");
+                    init_extension();
                     // restoreTabInfo(() => {
                     //     if (currentActiveTab === undefined) {
                     //         for (var tab of tabs) {
