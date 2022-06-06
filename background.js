@@ -3,7 +3,7 @@
 // found in the LICENSE file.
 'use strict';
 
-const DEBUG = false;
+const DEBUG = true;
 const ALARM_INTERVAL = 1; // Threshold for update groups (minute)
 const SKIP_THRESHOLD = 2000; // Threshold for removing current visiting tab from target (milliseconds)
 const MAX_TRIAL = 20;
@@ -416,7 +416,7 @@ function markTabsInGroup(gid, mark) {
 
 // Add tab into map
 chrome.tabs.onCreated.addListener(
-    async (tab) => {
+    (tab) => {
         withGlobal((global) => {
             var tabInfoMap = global.getTabInfoMap();
             var tabInfo = new TabInfo(tab);
@@ -548,10 +548,10 @@ function ungroupAll(tabInfoMap, callback) {
 }
 
 // Wrapper of chrome.tabs.ungroup
-function ungroup(tabIdList, trial, callback) {
+async function ungroup(tabIdList, trial, callback) {
     try {
         if (trial <= MAX_TRIAL) {
-            return chrome.tabs.ungroup(tabIdList).catch((e) => {
+            chrome.tabs.ungroup(tabIdList).catch((e) => {
                 setTimeout(
                     () => ungroup(tabIdList, trial + 1),
                     TIMEOUT
