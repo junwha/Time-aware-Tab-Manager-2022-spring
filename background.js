@@ -3,7 +3,7 @@
 // found in the LICENSE file.
 'use strict';
 
-const DEBUG = false;
+const DEBUG = true;
 const ALARM_INTERVAL = 1; // Threshold for update groups (minute)
 const SKIP_THRESHOLD = 2000; // Threshold for removing current visiting tab from target (milliseconds)
 const MAX_TRIAL = 20;
@@ -253,7 +253,7 @@ function init_extension() {
         console.log("[DEBUG] Initial tabs are added into info map");
         console.log(tabInfoMap);
 
-        ungroupAll();
+        ungroupAll(tabInfoMap);
 
         backupGlobal();
     });
@@ -513,7 +513,7 @@ function regroup() {
         } else {
 
             let [firstStage, secondStage] = getTabListsByTime(tabInfoMap, THRESHOLD, currentActiveTab);
-            ungroupAll();
+            ungroupAll(tabInfoMap);
             groupTabs(firstStage, THRESHOLD[0]);
             groupTabs(secondStage, THRESHOLD[1]);
 
@@ -524,25 +524,23 @@ function regroup() {
 }
 
 // Ungroup all tabs in current state
-async function ungroupAll() {
-    withGlobal((global) => {
-        var tabInfoMap = global.getTabInfoMap();
-        if (tabInfoMap.size == 0)
-            return;
+async function ungroupAll(tabInfoMap) {
+    // var tabInfoMap = global.getTabInfoMap();
+    if (tabInfoMap.size == 0)
+        return;
 
-        var tabIdList = [];
+    var tabIdList = [];
 
-        for (const t of tabInfoMap.values()) {
-            // if (!t.isInWhiteList()) // Check if the tab is in white list
+    for (const t of tabInfoMap.values()) {
+        // if (!t.isInWhiteList()) // Check if the tab is in white list
 
-            // else
-            //     console.log("[DEBUG] this tab is in white list: " + t.tab.title);
-            tabIdList.push(t.getTabId());
-        }
+        // else
+        //     console.log("[DEBUG] this tab is in white list: " + t.tab.title);
+        tabIdList.push(t.getTabId());
+    }
 
-        // targetGroupIDs = []; // untrack all (we already checked) 
-        ungroup(tabIdList, 1);
-    });
+    // targetGroupIDs = []; // untrack all (we already checked) 
+    ungroup(tabIdList, 1);
 }
 
 // Wrapper of chrome.tabs.ungroup
