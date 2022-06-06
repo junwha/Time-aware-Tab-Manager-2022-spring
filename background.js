@@ -515,9 +515,8 @@ function regroup() {
             });
 
         } else {
-
-            let [firstStage, secondStage] = getTabListsByTime(tabInfoMap, THRESHOLD, currentActiveTab);
             ungroupAll(tabInfoMap, () => {
+                let [firstStage, secondStage] = getTabListsByTime(tabInfoMap, THRESHOLD, currentActiveTab);
                 groupTabs(firstStage, THRESHOLD[0]);
                 groupTabs(secondStage, THRESHOLD[1]);
             });
