@@ -13,6 +13,12 @@ const TIMEOUT = 100;
 const MIN_TO_MS = DEBUG ? 1000 : 60 * 1000;
 
 let globalVariable;
+
+chrome.alarms.create(
+    "tab_timer",
+    { periodInMinutes: ALARM_INTERVAL },
+);
+
 class GlobalVariable {
     constructor(THRESHOLD, map, currentActiveTab) {
         this.THRESHOLD = THRESHOLD; //[60, 120]; // Threshold for first and second stage (minute)
@@ -232,11 +238,6 @@ function restoreGlobal(callback) {
 /// Listeners 
 
 function init_extension() {
-    chrome.alarms.create(
-        "tab_timer",
-        { periodInMinutes: ALARM_INTERVAL },
-    );
-
     var tabInfoMap = new Map();
     globalVariable = new GlobalVariable([60, 120], tabInfoMap, undefined);
     backupGlobal();
@@ -680,7 +681,7 @@ async function group(tidList, elapsedTime, windowId, trial) {
                         title: _timeInfo
                     });
 
-                    p.catch((e) => console.log("[Exception] no group"));
+                    p.catch((e) => console.log("[Exception] no group: " + tidList));
                 });
             });
         }
