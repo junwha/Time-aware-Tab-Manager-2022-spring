@@ -200,8 +200,8 @@ function getUnixTime() {
 // https://stackoverflow.com/questions/31605172/how-can-i-store-a-map-object-in-a-chrome-app
 function backupGlobal() {
     if (globalVariable === undefined) return;
-    console.log("[DEBUG] backup bellow structure")
-    console.log(Object.fromEntries(globalVariable.getTabInfoMap()));
+    console.log("[DEBUG] backup")
+    // console.log(Object.fromEntries(globalVariable.getTabInfoMap()));
     chrome.storage.local.set({ "global_variable": globalVariable, "tab_info_map": Object.fromEntries(globalVariable.getTabInfoMap()) });
 
 }
