@@ -314,6 +314,8 @@ chrome.runtime.onSuspend.addListener(
 
 chrome.idle.onStateChanged.addListener(
     (newState) => {
+        if (globalVariable !== undefined) backupGlobal();
+
         if (newState != "active") {
             console.log("[DEBUG] process is in idle state (or locked)");
             // backupGlobal();
