@@ -214,24 +214,41 @@ function backupGlobal() {
 
 function restoreGlobal(callback) {
     chrome.storage.local.get(["global_variable", "tab_info_map"], (items) => {
-        console.log("[DEBUG] Restore tab info from local storage");
-        var restoredObject = items["global_variable"];
-        console.log(items);
-        /// Restore tab info map
-        var restoredEntries = Object.entries(items["tab_info_map"]);
+        chrome.tabs.query({}, (tabs) => {
+            console.log("[DEBUG] Restore tab info from local storage");
+            var restoredObject = items["global_variable"];
+            console.log(items);
+            /// Restore tab info map
+            var restoredEntries = Object.entries(items["tab_info_map"]);
 
-        for (var entry of restoredEntries) {
-            entry[0] = parseInt(entry[0]);
-            var tabInfo = new TabInfo(entry[1]["tab"]);
-            tabInfo.setAll(entry[1]);
-            entry[1] = tabInfo;
-        }
+            for (var entry of restoredEntries) {
+                entry[0] = parseInt(entry[0]);
+                var tabInfo = new TabInfo(entry[1]["tab"]);
+                tabInfo.setAll(entry[1]);
+                entry[1] = tabInfo;
+            }
 
-        var tabInfoMap = new Map(restoredEntries);
+            var tabInfoMap = new Map(restoredEntries);
+            var tabMap = new Map();
 
-        // Restore global variable
-        globalVariable = new GlobalVariable(restoredObject["THRESHOLD"], tabInfoMap, restoredObject["currentActiveTab"]);
-        callback();
+            for (var tab of tabs) {
+                tabMap.set(tab.id, tab);
+            }
+
+            for (var id of tabInfoMap.keys()) {
+                var tabInfo = tabInfoMap.get(id);
+                if (entry === undefined) {
+                    tabInfoMap.set(id, new TabInfo(tabMap.get(id)));
+                }
+                if (tabMap.get(id).status == "unloaded") {
+                    tabInfoMap.delete(id);
+                }
+            }
+
+            // Restore global variable
+            globalVariable = new GlobalVariable(restoredObject["THRESHOLD"], tabInfoMap, restoredObject["currentActiveTab"]);
+            callback();
+        });
     });
 }
 
