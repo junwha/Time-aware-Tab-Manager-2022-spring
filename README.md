@@ -10,7 +10,7 @@ You can download the zip file and import the unzipped file at chrome > chrome ex
 ### Report
 You can see our report in the bellow link
 
-https://github.com/junwha0511/Time-aware-Tab-Manager/files/8935140/Time.Aware.Tab.Manager.pdf
+https://github.com/junwha0511/Time-aware-Tab-Manager-2022-spring/files/8935140/Time.Aware.Tab.Manager.pdf
 ### Contact
 This is the project for CSE333 in UNIST.
 If you have any problem, please open the issue to this repository.
